@@ -84,3 +84,84 @@ balanceFor participantId transactions =
         |> List.filter (\tx -> tx.participantId == participantId)
         |> List.map .amount
         |> List.sum
+
+
+canClaimTask : Time.Zone -> Time.Posix -> ParticipantId -> Task -> Dict TransactionId PointTransaction -> Bool
+canClaimTask zone now participantId task transactions =
+    let
+        pastClaims =
+            transactions
+                |> Dict.values
+                |> List.filter
+                    (\tx ->
+                        tx.participantId == participantId && tx.type_ == EarnedFromTask task.id
+                    )
+    in
+    case task.recurrence of
+        OneTime ->
+            List.isEmpty pastClaims
+
+        Daily ->
+            not (List.any (\tx -> isSameDay zone tx.timestamp now) pastClaims)
+
+        Weekly ->
+            not (List.any (\tx -> isSameWeek zone tx.timestamp now) pastClaims)
+
+        Monthly ->
+            not (List.any (\tx -> isSameMonth zone tx.timestamp now) pastClaims)
+
+
+isSameMonth : Time.Zone -> Time.Posix -> Time.Posix -> Bool
+isSameMonth zone t1 t2 =
+    (Time.toYear zone t1 == Time.toYear zone t2)
+        && (Time.toMonth zone t1 == Time.toMonth zone t2)
+
+
+isSameDay : Time.Zone -> Time.Posix -> Time.Posix -> Bool
+isSameDay zone t1 t2 =
+    isSameMonth zone t1 t2
+        && (Time.toDay zone t1 == Time.toDay zone t2)
+
+
+isSameWeek : Time.Zone -> Time.Posix -> Time.Posix -> Bool
+isSameWeek zone t1 t2 =
+    startOfWeekMillis zone t1 == startOfWeekMillis zone t2
+
+
+startOfWeekMillis : Time.Zone -> Time.Posix -> Int
+startOfWeekMillis zone time =
+    let
+        dayOffset =
+            case Time.toWeekday zone time of
+                Time.Mon ->
+                    0
+
+                Time.Tue ->
+                    1
+
+                Time.Wed ->
+                    2
+
+                Time.Thu ->
+                    3
+
+                Time.Fri ->
+                    4
+
+                Time.Sat ->
+                    5
+
+                Time.Sun ->
+                    6
+
+        msPerDay =
+            86400000
+
+        -- Floor to midnight UTC after shifting by zone offset, then subtract days since Monday
+        millis =
+            Time.posixToMillis time
+
+        dayIndex =
+            millis // msPerDay
+    in
+    dayIndex - dayOffset

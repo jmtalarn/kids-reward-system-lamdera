@@ -2,11 +2,12 @@ module Backend exposing (..)
 
 import Dict exposing (Dict)
 import Domain exposing (..)
+import Env
 import Lamdera exposing (ClientId, SessionId)
 import Task
 import Time
 import Types exposing (..)
-
+import Set exposing (Set)
 
 app =
     Lamdera.backend
@@ -64,6 +65,7 @@ init =
             }
     in
     ( { nextId = 5
+      , authenticatedSessions = Set.empty
       , participants = Dict.singleton "1" starterParticipant
       , tasks =
             Dict.fromList
@@ -78,18 +80,40 @@ init =
 
 
 updateFromFrontend : SessionId -> ClientId -> ToBackend -> BackendModel -> ( BackendModel, Cmd BackendMsg )
-updateFromFrontend _ clientId msg model =
+updateFromFrontend sessionId clientId msg model =
     case msg of
         RequestInitialState ->
             ( model
             , Lamdera.sendToFrontend clientId (snapshotFor model)
             )
 
-        _ ->
-            -- Grab current server timestamp before mutating state
-            ( model
-            , Task.perform (GotTimeForToBackend clientId msg) Time.now
+        VerifyParentPin attempt ->
+            if attempt == Env.parentPin then
+                ( { model | authenticatedSessions = Set.insert sessionId model.authenticatedSessions }
+                , Lamdera.sendToFrontend clientId (ParentPinVerified True)
+                )
+
+            else
+                ( model, Lamdera.sendToFrontend clientId (ActionFailed "Incorrect Parent PIN.") )
+
+        LogoutParent ->
+            ( { model | authenticatedSessions = Set.remove sessionId model.authenticatedSessions }
+            , Lamdera.sendToFrontend clientId (ParentPinVerified False)
             )
+
+        CompleteTask _ ->
+            ( model, Task.perform (GotTimeForToBackend clientId msg) Time.now )
+
+        RedeemReward _ ->
+            ( model, Task.perform (GotTimeForToBackend clientId msg) Time.now )
+
+        _ ->
+            if Set.member sessionId model.authenticatedSessions then
+                ( model, Task.perform (GotTimeForToBackend clientId msg) Time.now )
+
+            else
+                ( model, Lamdera.sendToFrontend clientId (ActionFailed "Parent authorization required.") )
+
 
 
 update : BackendMsg -> BackendModel -> ( BackendModel, Cmd BackendMsg )
@@ -168,38 +192,6 @@ handleTimedAction clientId msg now model =
             in
             ( updatedModel, Lamdera.broadcast (snapshotFor updatedModel) )
 
-        CompleteTask { participantId, taskId } ->
-            case ( Dict.get participantId model.participants, Dict.get taskId model.tasks ) of
-                ( Just _, Just task ) ->
-                    if not task.active then
-                        ( model, Lamdera.sendToFrontend clientId (ActionFailed "This task is inactive.") )
-
-                    else if task.recurrence == OneTime && alreadyClaimedOneTime participantId taskId model.transactions then
-                        ( model, Lamdera.sendToFrontend clientId (ActionFailed "One-time task already completed!") )
-
-                    else
-                        let
-                            tx =
-                                { id = newId
-                                , participantId = participantId
-                                , amount = task.points
-                                , type_ = EarnedFromTask taskId
-                                , description = "Completed: " ++ task.title
-                                , timestamp = now
-                                , approvedBy = Nothing
-                                }
-
-                            updatedModel =
-                                { model
-                                    | nextId = model.nextId + 1
-                                    , transactions = Dict.insert newId tx model.transactions
-                                }
-                        in
-                        ( updatedModel, Lamdera.broadcast (snapshotFor updatedModel) )
-
-                _ ->
-                    ( model, Lamdera.sendToFrontend clientId (ActionFailed "Invalid participant or task.") )
-
         RedeemReward { participantId, rewardId } ->
             case ( Dict.get participantId model.participants, Dict.get rewardId model.rewards ) of
                 ( Just _, Just reward ) ->
@@ -236,15 +228,108 @@ handleTimedAction clientId msg now model =
                 _ ->
                     ( model, Lamdera.sendToFrontend clientId (ActionFailed "Invalid participant or reward.") )
 
+        VerifyParentPin _ ->
+            ( model, Cmd.none )
 
-alreadyClaimedOneTime : ParticipantId -> TaskId -> Dict TransactionId PointTransaction -> Bool
-alreadyClaimedOneTime participantId taskId transactions =
-    transactions
-        |> Dict.values
-        |> List.any
-            (\tx ->
-                tx.participantId == participantId && tx.type_ == EarnedFromTask taskId
-            )
+        AddManualAdjustment { participantId, amount, reason } ->
+            case Dict.get participantId model.participants of
+                Just _ ->
+                    let
+                        tx =
+                            { id = newId
+                            , participantId = participantId
+                            , amount = amount
+                            , type_ = ManualAdjustment reason
+                            , description =
+                                if String.isEmpty (String.trim reason) then
+                                    "Parent adjustment"
+
+                                else
+                                    reason
+                            , timestamp = now
+                            , approvedBy = Just "Parent"
+                            }
+
+                        updatedModel =
+                            { model
+                                | nextId = model.nextId + 1
+                                , transactions = Dict.insert newId tx model.transactions
+                            }
+                    in
+                    ( updatedModel, Lamdera.broadcast (snapshotFor updatedModel) )
+
+                Nothing ->
+                    ( model, Lamdera.sendToFrontend clientId (ActionFailed "Participant not found.") )
+        
+        CompleteTask { participantId, taskId } ->
+            case ( Dict.get participantId model.participants, Dict.get taskId model.tasks ) of
+                ( Just _, Just task ) ->
+                    if not task.active then
+                        ( model, Lamdera.sendToFrontend clientId (ActionFailed "This task is inactive.") )
+
+                    else if not (canClaimTask Time.utc now participantId task model.transactions) then
+                        ( model, Lamdera.sendToFrontend clientId (ActionFailed (cooldownMessage task.recurrence)) )
+
+                    else
+                        let
+                            tx =
+                                { id = newId
+                                , participantId = participantId
+                                , amount = task.points
+                                , type_ = EarnedFromTask taskId
+                                , description = "Completed: " ++ task.title
+                                , timestamp = now
+                                , approvedBy = Nothing
+                                }
+
+                            updatedModel =
+                                { model
+                                    | nextId = model.nextId + 1
+                                    , transactions = Dict.insert newId tx model.transactions
+                                }
+                        in
+                        ( updatedModel, Lamdera.broadcast (snapshotFor updatedModel) )
+
+                _ ->
+                    ( model, Lamdera.sendToFrontend clientId (ActionFailed "Invalid participant or task.") )
+
+        LogoutParent ->
+            ( model, Cmd.none )
+
+        ToggleTaskActive taskId ->
+            let
+                updatedTasks =
+                    Dict.update taskId (Maybe.map (\t -> { t | active = not t.active })) model.tasks
+
+                updatedModel =
+                    { model | tasks = updatedTasks }
+            in
+            ( updatedModel, Lamdera.broadcast (snapshotFor updatedModel) )
+
+        ToggleRewardActive rewardId ->
+            let
+                updatedRewards =
+                    Dict.update rewardId (Maybe.map (\r -> { r | active = not r.active })) model.rewards
+
+                updatedModel =
+                    { model | rewards = updatedRewards }
+            in
+            ( updatedModel, Lamdera.broadcast (snapshotFor updatedModel) )
+
+cooldownMessage : Recurrence -> String
+cooldownMessage recurrence =
+    case recurrence of
+        OneTime ->
+            "One-time task already completed!"
+
+        Daily ->
+            "Already completed today! Come back tomorrow."
+
+        Weekly ->
+            "Already completed this week! Resets Monday."
+
+        Monthly ->
+            "Already completed this month!"
 
 
 snapshotFor : BackendModel -> ToFrontend
