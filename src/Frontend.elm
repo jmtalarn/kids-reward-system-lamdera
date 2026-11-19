@@ -633,10 +633,10 @@ viewHeader model =
     div [ css [ displayFlex, justifyContent spaceBetween, alignItems center, marginBottom (rem 1.25) ] ]
         [ h1 [ css [ margin zero, fontSize (rem 1.6) ] ] [ text (I18n.appTitle model.lang) ]
         , if model.isParentMode then
-             button [ onClick LockParentMode, Styles.actionButton True "475569" ] [ text <| "🔒 " ++ (I18n.lockParentButton model.lang) ]
+             button [ onClick LockParentMode, Styles.actionButton True "475569" ] [ text <|  (I18n.lockParentButton model.lang) ]
 
          else
-            button [ onClick OpenPinPad, Styles.actionButton True "2563EB" ] [ text  <| "🔐 " ++ (I18n.parentModeButton model.lang) ]
+            button [ onClick OpenPinPad, Styles.actionButton True "2563EB" ] [ text  <| (I18n.parentModeButton model.lang) ]
 
       
         ]
