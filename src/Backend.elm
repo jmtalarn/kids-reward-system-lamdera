@@ -329,6 +329,60 @@ handleTimedAction clientId msg now model =
                     { model | transactions = Dict.remove txId model.transactions }
             in
             ( updatedModel, Lamdera.broadcast (snapshotFor updatedModel) )
+        UpdateParticipant data ->
+            let
+                updated =
+                    Dict.update data.id
+                        (Maybe.map (\p -> { p | name = data.name, avatar = data.avatar, color = data.color }))
+                        model.participants
+
+                updatedModel =
+                    { model | participants = updated }
+            in
+            ( updatedModel, Lamdera.broadcast (snapshotFor updatedModel) )
+
+        UpdateTask data ->
+            let
+                updated =
+                    Dict.update data.id
+                        (Maybe.map
+                            (\t ->
+                                { t
+                                    | title = data.title
+                                    , description = data.description
+                                    , points = data.points
+                                    , recurrence = data.recurrence
+                                    , assignedTo = data.assignedTo
+                                }
+                            )
+                        )
+                        model.tasks
+
+                updatedModel =
+                    { model | tasks = updated }
+            in
+            ( updatedModel, Lamdera.broadcast (snapshotFor updatedModel) )
+
+        UpdateReward data ->
+            let
+                updated =
+                    Dict.update data.id
+                        (Maybe.map
+                            (\r ->
+                                { r
+                                    | title = data.title
+                                    , description = data.description
+                                    , cost = data.cost
+                                    , emoji = data.emoji
+                                }
+                            )
+                        )
+                        model.rewards
+
+                updatedModel =
+                    { model | rewards = updated }
+            in
+            ( updatedModel, Lamdera.broadcast (snapshotFor updatedModel) )
 
 cooldownMessage : Recurrence -> String
 cooldownMessage recurrence =
@@ -355,6 +409,7 @@ snapshotFor model =
         , tasks = model.tasks
         , rewards = model.rewards
         , transactions = model.transactions
+        , pinLength = String.length Env.parentPin
         }
 
 serverZone : Time.Zone

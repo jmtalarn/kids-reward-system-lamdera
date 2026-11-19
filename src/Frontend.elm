@@ -20,9 +20,9 @@ import Time
 import Types exposing (..)
 import Url
 import CalendarView exposing (viewCalendarTab)
-
-
--- Inside view : FrontendModel -> Browser.Document FrontendMsg
+import Browser.Dom as Dom
+import PinPadModal exposing (viewPinPadModal)
+import Env
 
 
 app =
@@ -69,6 +69,11 @@ init url key =
       , selectedDate = Time.millisToPosix 0
       , lang = En
       , newTaskDays = [ Time.Mon, Time.Tue, Time.Wed, Time.Thu, Time.Fri ]
+      , editingKidId = Nothing
+      , editingTaskId = Nothing
+      , editingRewardId = Nothing
+      , showPinPad = False
+      , pinLength = String.length Env.parentPin
       }
     , Cmd.batch
         [ Lamdera.sendToBackend RequestInitialState
@@ -361,7 +366,69 @@ update msg model =
             )
         SetLanguage newLang ->
          ( { model | lang = newLang }, Cmd.none )
+        StartEditKid kid ->
+            ( { model | editingKidId = Just kid.id, newKidName = kid.name, newKidAvatar = kid.avatar, newKidColor = kid.color }
+            , Task.attempt (\_ -> NoOp) (Dom.focus "edit-kid-input")
+            )
 
+        CancelEditKid ->
+            ( { model | editingKidId = Nothing, newKidName = "", newKidAvatar = "🦊" }, Cmd.none )
+
+        StartEditTask task ->
+            let
+                days =
+                    case task.recurrence of
+                        SpecificDays d ->
+                            d
+
+                        _ ->
+                            []
+            in
+            ( { model
+                | editingTaskId = Just task.id
+                , newTaskTitle = task.title
+                , newTaskPoints = String.fromInt task.points
+                , newTaskRecurrence = task.recurrence
+                , newTaskDays = days
+                , newTaskAssignedTo = task.assignedTo
+            }
+            , Task.attempt (\_ -> NoOp) (Dom.focus "edit-task-input")
+            )
+
+        CancelEditTask ->
+            ( { model | editingTaskId = Nothing, newTaskTitle = "", newTaskPoints = "10", newTaskDays = [], newTaskAssignedTo = [] }, Cmd.none )
+
+        StartEditReward reward ->
+            ( { model | editingRewardId = Just reward.id, newRewardTitle = reward.title, newRewardCost = String.fromInt reward.cost, newRewardEmoji = reward.emoji }
+            , Task.attempt (\_ -> NoOp) (Dom.focus "edit-reward-input")
+            )
+
+        CancelEditReward ->
+            ( { model | editingRewardId = Nothing, newRewardTitle = "", newRewardCost = "30", newRewardEmoji = "🍦" }, Cmd.none )
+        OpenPinPad ->
+            ( { model | showPinPad = True, pinInput = "", errorMessage = Nothing }, Cmd.none )
+
+        ClosePinPad ->
+            ( { model | showPinPad = False, pinInput = "" }, Cmd.none )
+
+        PressPinDigit digit ->
+            let
+                nextPin =
+                    model.pinInput ++ digit
+            in
+            if String.length nextPin >= model.pinLength then
+                ( { model | errorMessage = Nothing, pinInput = "" }
+                , Lamdera.sendToBackend (VerifyParentPin nextPin)
+                )
+
+            else
+                ( { model | pinInput = nextPin }, Cmd.none )
+
+
+        BackspacePin ->
+            ( { model | pinInput = String.dropRight 1 model.pinInput }, Cmd.none )
+
+        NoOp -> ( model, Cmd.none )
 updateFromBackend : ToFrontend -> FrontendModel -> ( FrontendModel, Cmd FrontendMsg )
 updateFromBackend msg model =
     case msg of
@@ -390,18 +457,19 @@ updateFromBackend msg model =
             )
 
         ParentPinVerified ok ->
-            ( { model
-                | isParentMode = ok
-                , pinInput = ""
-                , activeTab =
-                    if ok then
-                        AdminTab
+         ( { model
+             | isParentMode = ok
+             , showPinPad = False
+             , pinInput = ""
+             , activeTab =
+                 if ok then
+                     AdminTab
 
-                    else
-                        TasksTab
-              }
-            , Cmd.none
-            )
+                 else
+                     TasksTab
+           }
+         , Cmd.none
+         )
 
         ActionFailed err ->
             ( { model | errorMessage = Just err }, Cmd.none )
@@ -419,10 +487,11 @@ viewPage model =
     div [ Styles.pageShell, css [ paddingBottom (rem 6) ] ]
         [ div [ Styles.container ]
             [ viewHeader model
-            , viewError model.errorMessage
+            , viewError model.errorMessage model.lang
             , viewParticipantBar model
             , viewActiveTab model
             ]
+        , viewPinPadModal model
         , viewCelebration model.celebration
         , viewBottomTabs model
         ]
@@ -564,30 +633,22 @@ viewHeader model =
     div [ css [ displayFlex, justifyContent spaceBetween, alignItems center, marginBottom (rem 1.25) ] ]
         [ h1 [ css [ margin zero, fontSize (rem 1.6) ] ] [ text (I18n.appTitle model.lang) ]
         , if model.isParentMode then
-            button [ onClick LockParentMode, Styles.actionButton True "475569" ] [ text (I18n.lockParentButton model.lang) ]
+             button [ onClick LockParentMode, Styles.actionButton True "475569" ] [ text <| "🔒 " ++ (I18n.lockParentButton model.lang) ]
 
-          else
-            form [ onSubmit SubmitPin, Styles.row 0.5 ]
-                [ input
-                    [ type_ "password"
-                    , placeholder (I18n.pinPlaceholder model.lang)
-                    , value model.pinInput
-                    , onInput UpdatePinInput
-                    , css [ width (px 80), padding (rem 0.5), borderRadius (px 8), border3 (px 1) solid (hex "CBD5E1") ]
-                    ]
-                    []
-                , button [ type_ "submit", Styles.actionButton True "2563EB" ] [ text (I18n.parentModeButton model.lang) ]
-                ]
+         else
+            button [ onClick OpenPinPad, Styles.actionButton True "2563EB" ] [ text  <| "🔐 " ++ (I18n.parentModeButton model.lang) ]
+
+      
         ]
 
 
-viewError : Maybe String -> Html FrontendMsg
-viewError maybeErr =
+viewError : Maybe String -> Language -> Html FrontendMsg
+viewError maybeErr lang =
     case maybeErr of
         Just err ->
             div [ css [ backgroundColor (hex "FEE2E2"), color (hex "991B1B"), padding (rem 0.75), borderRadius (px 10), marginBottom (rem 1) ] ]
                 [ text err
-                , button [ onClick DismissError, css [ marginLeft (rem 1) ] ] [ text "×" ]
+                , button [ onClick DismissError, css [ marginLeft (rem 1) ] ] [ text (I18n.closeBtnSymbol lang) ]
                 ]
 
         Nothing ->

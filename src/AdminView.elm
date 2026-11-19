@@ -4,7 +4,7 @@ import Css exposing (..)
 import Dict
 import Domain exposing (..)
 import Html.Styled exposing (..)
-import Html.Styled.Attributes exposing (css, placeholder, selected, type_, value)
+import Html.Styled.Attributes exposing (id, css, placeholder, selected, type_, value)
 import Html.Styled.Events exposing (onClick, onInput, onSubmit)
 import I18n
 import Styles
@@ -80,13 +80,42 @@ viewLanguageCard current =
 
 viewKidForm : FrontendModel -> Html FrontendMsg
 viewKidForm model =
+    let
+        isEditing =
+            model.editingKidId /= Nothing
+    in
     div [ Styles.card [] ]
-        [ sectionHeader "🧒" (I18n.addKidSection model.lang)
+        [ sectionHeader
+            (if isEditing then
+                "✏️"
+
+             else
+                "🧒"
+            )
+            (if isEditing then
+                "Edit Kid"
+
+             else
+                "Add Kid"
+            )
         , form [ onSubmit SubmitNewKid, Styles.row 0.6 ]
-            [ input [ placeholder "Avatar", value model.newKidAvatar, onInput UpdateNewKidAvatar, Styles.field [ width (px 58), textAlign center ] ] []
-            , input [ placeholder "Kid name", value model.newKidName, onInput UpdateNewKidName, Styles.field [ flexGrow (num 1) ] ] []
+            [ input [ placeholder (I18n.avatarPlaceholder model.lang), value model.newKidAvatar, onInput UpdateNewKidAvatar, Styles.field [ width (px 58), textAlign center ] ] []
+            , input [ id "edit-kid-input", placeholder (I18n.kidNamePlaceholder model.lang), value model.newKidName, onInput UpdateNewKidName, Styles.field [ flexGrow (num 1) ] ] []
             , div [ Styles.row 0.35 ] (List.map (viewColorSwatch model.newKidColor) kidColors)
-            , button [ type_ "submit", Styles.actionButton True "2563EB" ] [ text (I18n.addButton model.lang) ]
+            , button [ type_ "submit", Styles.actionButton True "2563EB" ]
+                [ text
+                    (if isEditing then
+                        I18n.saveButton model.lang
+
+                     else
+                        I18n.addButton model.lang
+                    )
+                ]
+            , if isEditing then
+                button [ type_ "button", onClick CancelEditKid, Styles.actionButton True "64748B" ] [ text (I18n.cancelButton model.lang) ]
+
+              else
+                text ""
             ]
         ]
 
@@ -122,12 +151,25 @@ viewTaskForm model =
 
                 _ ->
                     False
+        isEditing = model.editingTaskId /= Nothing
     in
     div [ Styles.card [] ]
-        [ sectionHeader "🎯" (I18n.createMissionTask model.lang)
+        [ sectionHeader
+            (if isEditing then
+                "✏️"
+
+             else
+                "🎯"
+            )
+            (if isEditing then
+                I18n.editTaskTitle model.lang
+
+             else
+                I18n.createTaskTitle model.lang
+            )
         , form [ onSubmit SubmitNewTask, Styles.row 0.6 ]
-            [ input [ placeholder "Task title", value model.newTaskTitle, onInput UpdateNewTaskTitle, Styles.field [ flexGrow (num 1) ] ] []
-            , input [ type_ "number", placeholder "Pts", value model.newTaskPoints, onInput UpdateNewTaskPoints, Styles.field [ width (px 75) ] ] []
+            [ input [ id "edit-task-input", placeholder (I18n.taskTitlePlaceholder model.lang), value model.newTaskTitle, onInput UpdateNewTaskTitle, Styles.field [ flexGrow (num 1) ] ] []
+            , input [ type_ "number", placeholder (I18n.ptsPlaceholder model.lang), value model.newTaskPoints, onInput UpdateNewTaskPoints, Styles.field [ width (px 75) ] ] []
             , select [ onInput (toRecurrence >> UpdateNewTaskRecurrence), Styles.field [] ]
                 [ option [ value "Daily", selected (model.newTaskRecurrence == Daily) ] [ text (I18n.dailyLabel model.lang) ]
                 , option [ value "SpecificDays", selected isSpecificDays ] [ text (I18n.specificDays model.lang) ]
@@ -135,7 +177,20 @@ viewTaskForm model =
                 , option [ value "Monthly", selected (model.newTaskRecurrence == Monthly) ] [ text (I18n.monthlyLabel model.lang) ]
                 , option [ value "OneTime", selected (model.newTaskRecurrence == OneTime) ] [ text (I18n.oneTime model.lang) ]
                 ]
-            , button [ type_ "submit", Styles.actionButton True "2563EB" ] [ text (I18n.addButton model.lang) ]
+            , button [ type_ "submit", Styles.actionButton True "2563EB" ]
+                [ text
+                    (if isEditing then
+                        I18n.saveButton model.lang
+
+                     else
+                        I18n.addButton model.lang
+                    )
+                ]
+            , if isEditing then
+                button [ type_ "button", onClick CancelEditTask, Styles.actionButton True "64748B" ] [ text (I18n.cancelButton model.lang) ]
+
+              else
+                text ""
             ]
         , if isSpecificDays then
             viewDayPicker model
@@ -220,15 +275,45 @@ viewAssigneeChip assignedList kid =
 
 viewRewardForm : FrontendModel -> Html FrontendMsg
 viewRewardForm model =
+    let
+        isEditing =
+            model.editingRewardId /= Nothing
+    in
     div [ Styles.card [] ]
-        [ sectionHeader "🎁" (I18n.createShopRewardSection model.lang)
+        [ sectionHeader
+            (if isEditing then
+                "✏️"
+
+             else
+                "🎁"
+            )
+            (if isEditing then
+                I18n.editRewardTitle model.lang
+
+             else
+                I18n.createRewardTitle model.lang
+            )
         , form [ onSubmit SubmitNewReward, Styles.row 0.6 ]
-            [ input [ placeholder "Emoji", value model.newRewardEmoji, onInput UpdateNewRewardEmoji, Styles.field [ width (px 58), textAlign center ] ] []
-            , input [ placeholder "Reward title", value model.newRewardTitle, onInput UpdateNewRewardTitle, Styles.field [ flexGrow (num 1) ] ] []
-            , input [ type_ "number", placeholder "Cost", value model.newRewardCost, onInput UpdateNewRewardCost, Styles.field [ width (px 75) ] ] []
-            , button [ type_ "submit", Styles.actionButton True "2563EB" ] [ text (I18n.addButton model.lang) ]
+            [ input [ placeholder (I18n.emojiPlaceholder model.lang), value model.newRewardEmoji, onInput UpdateNewRewardEmoji, Styles.field [ width (px 58), textAlign center ] ] []
+            , input [ id "edit-reward-input", placeholder (I18n.rewardTitlePlaceholder model.lang), value model.newRewardTitle, onInput UpdateNewRewardTitle, Styles.field [ flexGrow (num 1) ] ] []
+            , input [ type_ "number", placeholder (I18n.costPlaceholder model.lang), value model.newRewardCost, onInput UpdateNewRewardCost, Styles.field [ width (px 75) ] ] []
+            , button [ type_ "submit", Styles.actionButton True "2563EB" ]
+                [ text
+                    (if isEditing then
+                        I18n.saveButton model.lang
+
+                     else
+                        I18n.addButton model.lang
+                    )
+                ]
+            , if isEditing then
+                button [ type_ "button", onClick CancelEditReward, Styles.actionButton True "64748B" ] [ text (I18n.cancelButton model.lang) ]
+
+              else
+                text ""
             ]
         ]
+
 
 
 viewBonusForm : FrontendModel -> Html FrontendMsg
@@ -236,10 +321,10 @@ viewBonusForm model =
     case model.selectedParticipant |> Maybe.andThen (\pid -> Dict.get pid model.participants) of
         Just kid ->
             div [ Styles.card [] ]
-                [ sectionHeader "⚡" ("Quick Adjustment for " ++ kid.avatar ++ " " ++ kid.name)
+                [ sectionHeader "⚡" (I18n.quickAdjustmentTitle model.lang kid.avatar kid.name)
                 , form [ onSubmit (SubmitBonus kid.id), Styles.row 0.6 ]
-                    [ input [ type_ "number", placeholder "+10 / -5", value model.bonusAmount, onInput UpdateBonusAmount, Styles.field [ width (px 85) ] ] []
-                    , input [ placeholder "Reason (e.g. Great teamwork)", value model.bonusReason, onInput UpdateBonusReason, Styles.field [ flexGrow (num 1) ] ] []
+                    [ input [ type_ "number", placeholder (I18n.bonusAmountPlaceholder model.lang), value model.bonusAmount, onInput UpdateBonusAmount, Styles.field [ width (px 85) ] ] []
+                    , input [ placeholder (I18n.bonusReasonPlaceholder model.lang), value model.bonusReason, onInput UpdateBonusReason, Styles.field [ flexGrow (num 1) ] ] []
                     , button [ type_ "submit", Styles.actionButton True "16A34A" ] [ text (I18n.applyButton model.lang) ]
                     ]
                 ]
@@ -251,7 +336,18 @@ viewBonusForm model =
 viewManageItems : FrontendModel -> Html FrontendMsg
 viewManageItems model =
     div [ Styles.card [] ]
-        [ sectionHeader "📦" "Manage Tasks & Rewards"
+        [ sectionHeader "📦" (I18n.manageSectionTitle model.lang)
+        , div [ css [ displayFlex, flexDirection column, property "gap" "0.5rem", marginBottom (rem 1.25) ] ]
+            (Dict.values model.participants
+                |> List.map
+                    (\kid ->
+                        div [ css [ displayFlex, justifyContent spaceBetween, alignItems center, padding (rem 0.6), borderRadius (px 10), backgroundColor (hex "F8FAFC") ] ]
+                            [ span [ css [ fontWeight (int 600), color (hex (String.dropLeft 1 kid.color)) ] ]
+                                [ text (kid.avatar ++ " " ++ kid.name) ]
+                            , button [ type_ "button", onClick (StartEditKid kid), Styles.actionButton True "2563EB" ] [ text (I18n.editButton model.lang) ]
+                            ]
+                    )
+            )
         , div [ css [ displayFlex, flexDirection column, property "gap" "0.5rem", marginBottom (rem 1.25) ] ]
             (Dict.values model.tasks
                 |> List.map
@@ -259,12 +355,15 @@ viewManageItems model =
                         div [ css [ displayFlex, justifyContent spaceBetween, alignItems center, padding (rem 0.6), borderRadius (px 10), backgroundColor (hex "F8FAFC") ] ]
                             [ span [ css [ fontWeight (int 600), opacity (if t.active then num 1 else num 0.5) ] ]
                                 [ text (t.title ++ " (+" ++ String.fromInt t.points ++ " pts)") ]
-                            , button
-                                [ type_ "button"
-                                , onClick (ClickToggleTaskActive t.id)
-                                , Styles.actionButton True (if t.active then "64748B" else "16A34A")
+                            , div [ Styles.row 0.4 ]
+                                [ button [ type_ "button", onClick (StartEditTask t), Styles.actionButton True "2563EB" ] [ text (I18n.editButton model.lang) ]
+                                , button
+                                    [ type_ "button"
+                                    , onClick (ClickToggleTaskActive t.id)
+                                    , Styles.actionButton True (if t.active then "64748B" else "16A34A")
+                                    ]
+                                    [ text (if t.active then I18n.archiveButtonText model.lang else I18n.restoreButtonText model.lang) ]
                                 ]
-                                [ text (if t.active then "Archive" else "Restore") ]
                             ]
                     )
             )
@@ -275,17 +374,19 @@ viewManageItems model =
                         div [ css [ displayFlex, justifyContent spaceBetween, alignItems center, padding (rem 0.6), borderRadius (px 10), backgroundColor (hex "F8FAFC") ] ]
                             [ span [ css [ fontWeight (int 600), opacity (if r.active then num 1 else num 0.5) ] ]
                                 [ text (r.emoji ++ " " ++ r.title ++ " (" ++ String.fromInt r.cost ++ " pts)") ]
-                            , button
-                                [ type_ "button"
-                                , onClick (ClickToggleRewardActive r.id)
-                                , Styles.actionButton True (if r.active then "64748B" else "16A34A")
+                            , div [ Styles.row 0.4 ]
+                                [ button [ type_ "button", onClick (StartEditReward r), Styles.actionButton True "2563EB" ] [ text (I18n.editButton model.lang) ]
+                                , button
+                                    [ type_ "button"
+                                    , onClick (ClickToggleRewardActive r.id)
+                                    , Styles.actionButton True (if r.active then "64748B" else "16A34A")
+                                    ]
+                                    [ text (if r.active then I18n.archiveButtonText model.lang else I18n.restoreButtonText model.lang) ]
                                 ]
-                                [ text (if r.active then "Archive" else "Restore") ]
                             ]
                     )
             )
         ]
-
 
 toRecurrence : String -> Recurrence
 toRecurrence str =

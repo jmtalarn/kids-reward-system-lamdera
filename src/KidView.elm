@@ -302,7 +302,7 @@ viewLedger model =
                                                 , fontSize (rem 0.8)
                                                 ]
                                             ]
-                                            [ text "🗑️" ]
+                                            [ text (I18n.deleteButton model.lang) ]
 
                                       else
                                         text ""

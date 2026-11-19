@@ -31,6 +31,7 @@ type alias FrontendModel =
     , errorMessage : Maybe String
     , now : Time.Posix
     , zone : Time.Zone
+
     -- Parent Mode & Forms
     , isParentMode : Bool
     , pinInput : String
@@ -50,8 +51,13 @@ type alias FrontendModel =
     , celebration : Maybe Celebration
     , celebrationCount : Int
     , selectedDate : Time.Posix
-    , lang: Language
+    , lang : Language
     , newTaskDays : List Time.Weekday
+    , editingKidId : Maybe ParticipantId
+    , editingTaskId : Maybe TaskId
+    , editingRewardId : Maybe RewardId
+    , showPinPad: Bool
+    , pinLength : Int
     }
 
 
@@ -65,6 +71,10 @@ type FrontendMsg
     | ClickRedeemReward ParticipantId RewardId
     | DismissError
       -- Parent PIN & Admin Forms
+    | OpenPinPad
+    | ClosePinPad
+    | PressPinDigit String
+    | BackspacePin
     | UpdatePinInput String
     | SubmitPin
     | LockParentMode
@@ -94,7 +104,13 @@ type FrontendMsg
     | SetLanguage Language
     | ToggleTaskDay Time.Weekday
     | SetTaskDays (List Time.Weekday)
-
+    | StartEditKid Participant
+    | CancelEditKid
+    | StartEditTask Task
+    | CancelEditTask
+    | StartEditReward Reward
+    | CancelEditReward
+    | NoOp
 
 
 type ToBackend
@@ -110,7 +126,9 @@ type ToBackend
     | CompleteTask { participantId : ParticipantId, taskId : TaskId, forDate : Time.Posix }
     | RedeemReward { participantId : ParticipantId, rewardId : RewardId }
     | DeleteTransaction TransactionId
-
+    | UpdateParticipant { id : ParticipantId, name : String, avatar : String, color : String }
+    | UpdateTask { id : TaskId, title : String, description : String, points : Int, recurrence : Recurrence, assignedTo : List ParticipantId }
+    | UpdateReward { id : RewardId, title : String, description : String, cost : Int, emoji : String }
 
 
 type BackendMsg
@@ -123,9 +141,12 @@ type ToFrontend
         , tasks : Dict TaskId Task
         , rewards : Dict RewardId Reward
         , transactions : Dict TransactionId PointTransaction
+        , pinLength : Int
         }
     | ParentPinVerified Bool
     | ActionFailed String
+
+
 
 type Tab
     = TasksTab
@@ -134,6 +155,7 @@ type Tab
     | AdminTab
     | CalendarTab
 
+
 type alias Celebration =
     { id : Int
     , title : String
@@ -141,4 +163,8 @@ type alias Celebration =
     , isReward : Bool
     }
 
-type Language = En | Es | Ca 
+
+type Language
+    = En
+    | Es
+    | Ca

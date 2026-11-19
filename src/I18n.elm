@@ -352,59 +352,8 @@ parentAdminPanel lang =
             "🛠️ Panell de Control de Pares"
 
 
-addKidLabel : Language -> String
-addKidLabel lang =
-    case lang of
-        En ->
-            "Add Kid"
-
-        Es ->
-            "Añadir Niño"
-
-        Ca ->
-            "Afegir Nen"
-
-
-addKidButton : Language -> String
-addKidButton lang =
-    case lang of
-        En ->
-            "Add Kid"
-
-        Es ->
-            "Añadir Niño"
-
-        Ca ->
-            "Afegir Nen"
-
-
-createTask : Language -> String
-createTask lang =
-    case lang of
-        En ->
-            "Create Task"
-
-        Es ->
-            "Crear Tarea"
-
-        Ca ->
-            "Crear Tasca"
-
-
-addTaskButton : Language -> String
-addTaskButton lang =
-    case lang of
-        En ->
-            "Add Task"
-
-        Es ->
-            "Añadir Tarea"
-
-        Ca ->
-            "Afegir Tasca"
-
-
-assignToEveryone : Language -> String
+addKidSection : Language -> String
+addKidSection lang =
 assignToEveryone lang =
     case lang of
         En ->
@@ -428,19 +377,6 @@ assignTo lang =
 
         Ca ->
             "Assignar a:"
-
-
-createShopReward : Language -> String
-createShopReward lang =
-    case lang of
-        En ->
-            "Create Shop Reward"
-
-        Es ->
-            "Crear Premio de Tienda"
-
-        Ca ->
-            "Crear Premi de Botiga"
 
 
 addRewardButton : Language -> String
@@ -493,45 +429,6 @@ manageTasks lang =
 
         Ca ->
             "Gestionar Tasques"
-
-
-manageShopRewards : Language -> String
-manageShopRewards lang =
-    case lang of
-        En ->
-            "Manage Shop Rewards"
-
-        Es ->
-            "Gestionar Premios de Tienda"
-
-        Ca ->
-            "Gestionar Premis de Botiga"
-
-
-archiveButton : Language -> String
-archiveButton lang =
-    case lang of
-        En ->
-            "Archive"
-
-        Es ->
-            "Archivar"
-
-        Ca ->
-            "Arxivar"
-
-
-restoreButton : Language -> String
-restoreButton lang =
-    case lang of
-        En ->
-            "Restore"
-
-        Es ->
-            "Restaurar"
-
-        Ca ->
-            "Restaurar"
 
 
 dailyLabel : Language -> String
@@ -677,19 +574,6 @@ pinPlaceholder lang =
             "PIN"
 
 
-dismissError : Language -> String
-dismissError lang =
-    case lang of
-        En ->
-            "x"
-
-        Es ->
-            "x"
-
-        Ca ->
-            "x"
-
-
 tasksSection : Language -> String
 tasksSection lang =
     case lang of
@@ -742,19 +626,6 @@ chooseLanguage lang =
             "Tria l'idioma de visualització per als nens"
 
 
-addKidSection : Language -> String
-addKidSection lang =
-    case lang of
-        En ->
-            "🧒 Add Kid"
-
-        Es ->
-            "🧒 Añadir Niño"
-
-        Ca ->
-            "🧒 Afegir Nen"
-
-
 addButton : Language -> String
 addButton lang =
     case lang of
@@ -766,19 +637,6 @@ addButton lang =
 
         Ca ->
             "+ Afegir"
-
-
-createMissionTask : Language -> String
-createMissionTask lang =
-    case lang of
-        En ->
-            "🎯 Create Mission / Task"
-
-        Es ->
-            "🎯 Crear Misión / Tarea"
-
-        Ca ->
-            "🎯 Crear Missió / Tasca"
 
 
 specificDays : Language -> String
@@ -833,43 +691,330 @@ satSun lang =
             "Ds–Dg"
 
 
-createShopRewardSection : Language -> String
-createShopRewardSection lang =
+cancelButton : Language -> String
+cancelButton lang =
     case lang of
         En ->
-            "🎁 Create Shop Reward"
+            "Cancel"
 
         Es ->
-            "🎁 Crear Premio de Tienda"
+            "Cancelar"
 
         Ca ->
-            "🎁 Crear Premi de Botiga"
+            "Cancelar"
 
 
-manageTasksSection : Language -> String
-manageTasksSection lang =
+editButton : Language -> String
+editButton lang =
     case lang of
         En ->
-            "📋 Manage Tasks"
+            "✏️ Edit"
 
         Es ->
-            "📋 Gestionar Tareas"
+            "✏️ Editar"
 
         Ca ->
-            "📋 Gestionar Tasques"
+            "✏️ Editar"
 
 
-manageRewardsSection : Language -> String
-manageRewardsSection lang =
+editTaskTitle : Language -> String
+editTaskTitle lang =
     case lang of
         En ->
-            "🎁 Manage Rewards"
+            "Edit Mission / Task"
 
         Es ->
-            "🎁 Gestionar Premios"
+            "Editar Misión / Tarea"
 
         Ca ->
-            "🎁 Gestionar Premis"
+            "Editar Missió / Tasca"
+
+
+createTaskTitle : Language -> String
+createTaskTitle lang =
+    case lang of
+        En ->
+            "Create Mission / Task"
+
+        Es ->
+            "Crear Misión / Tarea"
+
+        Ca ->
+            "Crear Missió / Tasca"
+
+
+editRewardTitle : Language -> String
+editRewardTitle lang =
+    case lang of
+        En ->
+            "Edit Shop Reward"
+
+        Es ->
+            "Editar Premio de Tienda"
+
+        Ca ->
+            "Editar Premi de Botiga"
+
+
+createRewardTitle : Language -> String
+createRewardTitle lang =
+    case lang of
+        En ->
+            "Create Shop Reward"
+
+        Es ->
+            "Crear Premio de Tienda"
+
+        Ca ->
+            "Crear Premi de Botiga"
+
+
+saveButton : Language -> String
+saveButton lang =
+    case lang of
+        En ->
+            "Save"
+
+        Es ->
+            "Guardar"
+
+        Ca ->
+            "Guardar"
+
+
+archiveButtonText : Language -> String
+archiveButtonText lang =
+    case lang of
+        En ->
+            "Archive"
+
+        Es ->
+            "Archivar"
+
+        Ca ->
+            "Arxivar"
+
+
+restoreButtonText : Language -> String
+restoreButtonText lang =
+    case lang of
+        En ->
+            "Restore"
+
+        Es ->
+            "Restaurar"
+
+        Ca ->
+            "Restaurar"
+
+
+parentPinTitle : Language -> String
+parentPinTitle lang =
+    case lang of
+        En ->
+            "Parent PIN"
+
+        Es ->
+            "PIN de Padres"
+
+        Ca ->
+            "PIN de Pares"
+
+
+pinInstructions : Language -> String
+pinInstructions lang =
+    case lang of
+        En ->
+            "Enter code & tap ✓"
+
+        Es ->
+            "Ingrese código y presione ✓"
+
+        Ca ->
+            "Introduïu codi i premeu ✓"
+
+
+unlockButton : Language -> String
+unlockButton lang =
+    case lang of
+        En ->
+            "✓ Unlock"
+
+        Es ->
+            "✓ Desbloquear"
+
+        Ca ->
+            "✓ Desbloquear"
+
+
+taskTitlePlaceholder : Language -> String
+taskTitlePlaceholder lang =
+    case lang of
+        En ->
+            "Task title"
+
+        Es ->
+            "Título de la tarea"
+
+        Ca ->
+            "Títol de la tasca"
+
+
+ptsPlaceholder : Language -> String
+ptsPlaceholder lang =
+    case lang of
+        En ->
+            "Pts"
+
+        Es ->
+            "Pts"
+
+        Ca ->
+            "Pts"
+
+
+bonusReasonPlaceholder : Language -> String
+bonusReasonPlaceholder lang =
+    case lang of
+        En ->
+            "Reason (e.g. Great teamwork)"
+
+        Es ->
+            "Razón (ej. Gran trabajo en equipo)"
+
+        Ca ->
+            "Motiu (p.ex. Excel·lent treball en equip)"
+
+
+rewardTitlePlaceholder : Language -> String
+rewardTitlePlaceholder lang =
+    case lang of
+        En ->
+            "Reward title"
+
+        Es ->
+            "Título del premio"
+
+        Ca ->
+            "Títol del premi"
+
+
+costPlaceholder : Language -> String
+costPlaceholder lang =
+    case lang of
+        En ->
+            "Cost"
+
+        Es ->
+            "Costo"
+
+        Ca ->
+            "Cost"
+
+
+avatarPlaceholder : Language -> String
+avatarPlaceholder lang =
+    case lang of
+        En ->
+            "Avatar"
+
+        Es ->
+            "Avatar"
+
+        Ca ->
+            "Avatar"
+
+
+emojiPlaceholder : Language -> String
+emojiPlaceholder lang =
+    case lang of
+        En ->
+            "Emoji"
+
+        Es ->
+            "Emoji"
+
+        Ca ->
+            "Emoji"
+
+
+quickAdjustmentTitle : Language -> String -> String -> String
+quickAdjustmentTitle lang avatar name =
+    case lang of
+        En ->
+            "Quick Adjustment for " ++ avatar ++ " " ++ name
+
+        Es ->
+            "Ajuste Rápido para " ++ avatar ++ " " ++ name
+
+        Ca ->
+            "Ajust Ràpid per a " ++ avatar ++ " " ++ name
+
+
+manageSectionTitle : Language -> String
+manageSectionTitle lang =
+    case lang of
+        En ->
+            "Manage Kids, Tasks & Rewards"
+
+        Es ->
+            "Gestionar Niños, Tareas y Premios"
+
+        Ca ->
+            "Gestionar Nens, Tasques i Premis"
+
+
+deleteButton : Language -> String
+deleteButton lang =
+    case lang of
+        En ->
+            "🗑️"
+
+        Es ->
+            "🗑️"
+
+        Ca ->
+            "🗑️"
+
+
+closeBtnSymbol : Language -> String
+closeBtnSymbol lang =
+    case lang of
+        En ->
+            "×"
+
+        Es ->
+            "×"
+
+        Ca ->
+            "×"
+
+
+kidNamePlaceholder : Language -> String
+kidNamePlaceholder lang =
+    case lang of
+        En ->
+            "Kid name"
+
+        Es ->
+            "Nombre del niño"
+
+        Ca ->
+            "Nom del nen"
+
+
+bonusAmountPlaceholder : Language -> String
+bonusAmountPlaceholder lang =
+    case lang of
+        En ->
+            "+10 / -5"
+
+        Es ->
+            "+10 / -5"
+
+        Ca ->
+            "+10 / -5"
+
 
 shortDayName : Language -> Time.Weekday -> String
 shortDayName lang day =
