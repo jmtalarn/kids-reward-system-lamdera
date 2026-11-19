@@ -352,8 +352,7 @@ parentAdminPanel lang =
             "🛠️ Panell de Control de Pares"
 
 
-addKidSection : Language -> String
-addKidSection lang =
+assignToEveryone : Language -> String
 assignToEveryone lang =
     case lang of
         En ->
