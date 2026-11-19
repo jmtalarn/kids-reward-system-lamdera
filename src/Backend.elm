@@ -274,7 +274,7 @@ handleTimedAction clientId msg now model =
                     else if isFuture then
                         ( model, Lamdera.sendToFrontend clientId (ActionFailed "Cannot complete tasks for future dates!") )
 
-                    else if not (canClaimTask Time.utc forDate participantId task model.transactions) then
+                    else if not (canClaimTask serverZone forDate participantId task model.transactions) then
                         ( model, Lamdera.sendToFrontend clientId (ActionFailed (cooldownMessage task.recurrence)) )
 
                     else
@@ -323,6 +323,12 @@ handleTimedAction clientId msg now model =
                     { model | rewards = updatedRewards }
             in
             ( updatedModel, Lamdera.broadcast (snapshotFor updatedModel) )
+        DeleteTransaction txId ->
+            let
+                updatedModel =
+                    { model | transactions = Dict.remove txId model.transactions }
+            in
+            ( updatedModel, Lamdera.broadcast (snapshotFor updatedModel) )
 
 cooldownMessage : Recurrence -> String
 cooldownMessage recurrence =
@@ -338,7 +344,9 @@ cooldownMessage recurrence =
 
         Monthly ->
             "Already completed this month!"
-
+        
+        SpecificDays _ ->
+            "Not scheduled for this day (or already completed today)!"
 
 snapshotFor : BackendModel -> ToFrontend
 snapshotFor model =
@@ -348,3 +356,7 @@ snapshotFor model =
         , rewards = model.rewards
         , transactions = model.transactions
         }
+
+serverZone : Time.Zone
+serverZone =
+    Time.customZone Env.timezoneOffsetMinutes []

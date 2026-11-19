@@ -10,6 +10,7 @@ import Domain exposing (..)
 import Html.Styled exposing (..)
 import Html.Styled.Attributes exposing (css, placeholder, style, type_, value)
 import Html.Styled.Events exposing (onClick, onInput, onSubmit)
+import I18n
 import KidView exposing (viewHeroBanner, viewLedger, viewParticipantBar, viewRewardShop, viewTaskGrid)
 import Lamdera
 import Process
@@ -66,6 +67,8 @@ init url key =
       , celebration = Nothing
       , celebrationCount = 0
       , selectedDate = Time.millisToPosix 0
+      , lang = En
+      , newTaskDays = [ Time.Mon, Time.Tue, Time.Wed, Time.Thu, Time.Fri ]
       }
     , Cmd.batch
         [ Lamdera.sendToBackend RequestInitialState
@@ -89,7 +92,7 @@ update msg model =
 
         ClickCompleteTask pid tid ->
             update (ClickCompleteTaskForDate pid tid model.now) model
-            
+
         ClickCompleteTaskForDate pid tid targetDate ->
                     let
                         nextCount =
@@ -202,26 +205,59 @@ update msg model =
             ( { model | newTaskRecurrence = rec }, Cmd.none )
 
         SubmitNewTask ->
+            let
+                finalRecurrence =
+                    case model.newTaskRecurrence of
+                        SpecificDays _ ->
+                            SpecificDays model.newTaskDays
+
+                        other ->
+                            other
+
+                hasEmptyDays =
+                    case finalRecurrence of
+                        SpecificDays days ->
+                            List.isEmpty days
+
+                        _ ->
+                            False
+            in
             case ( String.trim model.newTaskTitle, String.toInt model.newTaskPoints ) of
                 ( "", _ ) ->
                     ( { model | errorMessage = Just "Enter a task title." }, Cmd.none )
 
-                ( title, Just pts ) ->
-                    ( { model | newTaskTitle = "", newTaskPoints = "10", newTaskAssignedTo = [] }
-                    , Lamdera.sendToBackend
-                        (CreateTask
-                            { title = title
-                            , description = ""
-                            , points = pts
-                            , recurrence = model.newTaskRecurrence
-                            , assignedTo = model.newTaskAssignedTo
-                            }
-                        )
-                    )
-
-                _ ->
+                ( _, Nothing ) ->
                     ( { model | errorMessage = Just "Points must be a valid number." }, Cmd.none )
 
+                ( title, Just pts ) ->
+                    if hasEmptyDays then
+                        ( { model | errorMessage = Just "Select at least one day." }, Cmd.none )
+
+                    else
+                        ( { model | newTaskTitle = "", newTaskPoints = "10", newTaskAssignedTo = [] }
+                        , Lamdera.sendToBackend
+                            (CreateTask
+                                { title = title
+                                , description = ""
+                                , points = pts
+                                , recurrence = finalRecurrence
+                                , assignedTo = model.newTaskAssignedTo
+                                }
+                            )
+                        )
+        ToggleTaskDay day ->
+            let
+                updatedDays =
+                    if List.member day model.newTaskDays then
+                        List.filter ((/=) day) model.newTaskDays
+
+                    else
+                        model.newTaskDays ++ [ day ]
+            in
+            ( { model | newTaskDays = updatedDays }, Cmd.none )
+
+        SetTaskDays days ->
+            ( { model | newTaskDays = days }, Cmd.none )
         UpdateNewRewardTitle val ->
             ( { model | newRewardTitle = val }, Cmd.none )
 
@@ -318,6 +354,13 @@ update msg model =
         
         SelectCalendarDate date ->
          ( { model | selectedDate = date }, Cmd.none )
+        
+        ClickDeleteTransaction txId ->
+            ( model
+            , Lamdera.sendToBackend (DeleteTransaction txId)
+            )
+        SetLanguage newLang ->
+         ( { model | lang = newLang }, Cmd.none )
 
 updateFromBackend : ToFrontend -> FrontendModel -> ( FrontendModel, Cmd FrontendMsg )
 updateFromBackend msg model =
@@ -386,23 +429,7 @@ viewPage model =
 
 
 
--- div [ Styles.pageShell ]
---     [ div [ Styles.container ]
---         [ viewHeader model
---         , viewError model.errorMessage
---         , viewParticipantBar model
---         , case model.selectedParticipant |> Maybe.andThen (\pid -> Dict.get pid model.participants) of
---             Just kid ->
---                 viewKidDashboard kid model
---             Nothing ->
---                 p [] [ text "No kids yet. Unlock Parent Mode to add one!" ]
---         , if model.isParentMode then
---             viewAdminPanel model
---           else
---             text ""
---         , viewLedger model
---         ]
---     ]
+
 
 
 viewActiveTab : FrontendModel -> Html FrontendMsg
@@ -417,19 +444,19 @@ viewActiveTab model =
             case maybeKid of
                 Just kid ->
                     div []
-                        [ viewHeroBanner kid (balanceFor kid.id model.transactions)
-                        , viewTaskGrid kid model
+                        [ viewHeroBanner model.lang kid (balanceFor kid.id model.transactions)
+                        , viewTaskGrid model.lang kid model
                         ]
 
                 Nothing ->
-                    p [] [ text "No kids yet. Unlock Parent Mode to add one!" ]
+                    p [] [ text (I18n.noKidsYet model.lang) ]
         CalendarTab ->
          case maybeKid of
              Just kid ->
                  viewCalendarTab kid model
 
              Nothing ->
-                 p [] [ text "Select or add a kid first." ]
+                 p [] [ text (I18n.selectOrAddKid model.lang) ]
         ShopTab ->
             case maybeKid of
                 Just kid ->
@@ -438,12 +465,12 @@ viewActiveTab model =
                             balanceFor kid.id model.transactions
                     in
                     div []
-                        [ viewHeroBanner kid pts
+                        [ viewHeroBanner model.lang kid pts
                         , viewRewardShop kid pts model
                         ]
 
                 Nothing ->
-                    p [] [ text "Select or add a kid first." ]
+                    p [] [ text (I18n.selectOrAddKid model.lang) ]
 
         ActivityTab ->
             viewLedger model
@@ -454,7 +481,7 @@ viewActiveTab model =
 
             else
                 div [ Styles.card [ textAlign center ] ]
-                    [ p [] [ text "🔒 Unlock Parent Mode at the top to manage kids, tasks, and rewards." ] ]
+                    [ p [] [ text (I18n.unlockParentMode model.lang) ] ]
 
 
 viewBottomTabs : FrontendModel -> Html FrontendMsg
@@ -535,21 +562,21 @@ viewTabButton currentTab ( tab, icon, labelText ) =
 viewHeader : FrontendModel -> Html FrontendMsg
 viewHeader model =
     div [ css [ displayFlex, justifyContent spaceBetween, alignItems center, marginBottom (rem 1.25) ] ]
-        [ h1 [ css [ margin zero, fontSize (rem 1.6) ] ] [ text "Kids Reward System" ]
+        [ h1 [ css [ margin zero, fontSize (rem 1.6) ] ] [ text (I18n.appTitle model.lang) ]
         , if model.isParentMode then
-            button [ onClick LockParentMode, Styles.actionButton True "475569" ] [ text "🔒 Lock Parent" ]
+            button [ onClick LockParentMode, Styles.actionButton True "475569" ] [ text (I18n.lockParentButton model.lang) ]
 
           else
             form [ onSubmit SubmitPin, Styles.row 0.5 ]
                 [ input
                     [ type_ "password"
-                    , placeholder "PIN"
+                    , placeholder (I18n.pinPlaceholder model.lang)
                     , value model.pinInput
                     , onInput UpdatePinInput
                     , css [ width (px 80), padding (rem 0.5), borderRadius (px 8), border3 (px 1) solid (hex "CBD5E1") ]
                     ]
                     []
-                , button [ type_ "submit", Styles.actionButton True "2563EB" ] [ text "Parent Mode" ]
+                , button [ type_ "submit", Styles.actionButton True "2563EB" ] [ text (I18n.parentModeButton model.lang) ]
                 ]
         ]
 
@@ -560,7 +587,7 @@ viewError maybeErr =
         Just err ->
             div [ css [ backgroundColor (hex "FEE2E2"), color (hex "991B1B"), padding (rem 0.75), borderRadius (px 10), marginBottom (rem 1) ] ]
                 [ text err
-                , button [ onClick DismissError, css [ marginLeft (rem 1) ] ] [ text "x" ]
+                , button [ onClick DismissError, css [ marginLeft (rem 1) ] ] [ text "×" ]
                 ]
 
         Nothing ->
@@ -608,7 +635,7 @@ viewParticipantSwitcher model =
 viewTasks : ParticipantId -> FrontendModel -> Html FrontendMsg
 viewTasks pid model =
     div [ style "margin-bottom" "1.5rem" ]
-        [ h2 [] [ text "Tasks" ]
+        [ h2 [] [ text (I18n.tasksSection model.lang) ]
         , div []
             (Dict.values model.tasks
                 |> List.filter (\t -> t.active && (List.isEmpty t.assignedTo || List.member pid t.assignedTo))
@@ -655,7 +682,7 @@ viewTasks pid model =
 viewRewards : ParticipantId -> FrontendModel -> Html FrontendMsg
 viewRewards pid model =
     div [ style "margin-bottom" "1.5rem" ]
-        [ h2 [] [ text "Reward Shop" ]
+        [ h2 [] [ text (I18n.rewardShopSection model.lang) ]
         , div []
             (Dict.values model.rewards
                 |> List.filter .active
@@ -670,22 +697,37 @@ viewRewards pid model =
         ]
 
 
-viewLedger : FrontendModel -> Html FrontendMsg
-viewLedger model =
-    div []
-        [ h2 [] [ text "Point Ledger" ]
-        , ul []
-            (Dict.values model.transactions
-                |> List.reverse
-                |> List.map
-                    (\tx ->
-                        let
-                            kidName =
-                                Dict.get tx.participantId model.participants
-                                    |> Maybe.map (\p -> p.avatar ++ " " ++ p.name)
-                                    |> Maybe.withDefault tx.participantId
-                        in
-                        li [] [ text (kidName ++ ": " ++ tx.description ++ " (" ++ String.fromInt tx.amount ++ " pts)") ]
-                    )
+viewLangSwitcher : Language -> Html FrontendMsg
+viewLangSwitcher current =
+    div [ Styles.row 0.25 ]
+        (List.map
+            (\( l, code ) ->
+                button
+                    [ onClick (SetLanguage l)
+                    , css
+                        [ padding2 (rem 0.3) (rem 0.55)
+                        , borderRadius (px 8)
+                        , border zero
+                        , cursor pointer
+                        , fontWeight (int 700)
+                        , fontSize (rem 0.78)
+                        , backgroundColor
+                            (if current == l then
+                                hex "2563EB"
+
+                             else
+                                hex "E2E8F0"
+                            )
+                        , color
+                            (if current == l then
+                                hex "FFFFFF"
+
+                             else
+                                hex "475569"
+                            )
+                        ]
+                    ]
+                    [ text code ]
             )
-        ]
+            [ ( Ca, "CA" ), ( Es, "ES" ), ( En, "EN" ) ]
+        )

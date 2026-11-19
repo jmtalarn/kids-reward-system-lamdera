@@ -50,12 +50,16 @@ type alias FrontendModel =
     , celebration : Maybe Celebration
     , celebrationCount : Int
     , selectedDate : Time.Posix
+    , lang: Language
+    , newTaskDays : List Time.Weekday
     }
 
 
 type FrontendMsg
     = UrlClicked Browser.UrlRequest
     | UrlChanged Url.Url
+    | GotZone Time.Zone
+    | Tick Time.Posix
     | SelectParticipant (Maybe ParticipantId)
     | ClickCompleteTask ParticipantId TaskId
     | ClickRedeemReward ParticipantId RewardId
@@ -86,8 +90,11 @@ type FrontendMsg
     | ClearCelebration Int
     | SelectCalendarDate Time.Posix
     | ClickCompleteTaskForDate ParticipantId TaskId Time.Posix
-    | GotZone Time.Zone
-    | Tick Time.Posix
+    | ClickDeleteTransaction TransactionId
+    | SetLanguage Language
+    | ToggleTaskDay Time.Weekday
+    | SetTaskDays (List Time.Weekday)
+
 
 
 type ToBackend
@@ -102,6 +109,7 @@ type ToBackend
     | ToggleRewardActive RewardId
     | CompleteTask { participantId : ParticipantId, taskId : TaskId, forDate : Time.Posix }
     | RedeemReward { participantId : ParticipantId, rewardId : RewardId }
+    | DeleteTransaction TransactionId
 
 
 
@@ -132,3 +140,5 @@ type alias Celebration =
     , subtitle : String
     , isReward : Bool
     }
+
+type Language = En | Es | Ca 

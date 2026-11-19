@@ -2,7 +2,7 @@ module Domain exposing (..)
 
 import Dict exposing (Dict)
 import Time
-
+import Env
 
 type alias ParticipantId =
     String
@@ -34,6 +34,7 @@ type Recurrence
     | Daily
     | Weekly
     | Monthly
+    | SpecificDays (List Time.Weekday)
 
 
 type alias Task =
@@ -109,6 +110,10 @@ canClaimTask zone now participantId task transactions =
 
         Monthly ->
             not (List.any (\tx -> isSameMonth zone tx.timestamp now) pastClaims)
+        
+        SpecificDays allowedDays ->
+            List.member (Time.toWeekday zone now) allowedDays
+                && not (List.any (\tx -> isSameDay zone tx.timestamp now) pastClaims)  
 
 
 isSameMonth : Time.Zone -> Time.Posix -> Time.Posix -> Bool
@@ -157,11 +162,21 @@ startOfWeekMillis zone time =
         msPerDay =
             86400000
 
-        -- Floor to midnight UTC after shifting by zone offset, then subtract days since Monday
-        millis =
-            Time.posixToMillis time
+        -- Shift by zone offset so day boundaries match local midnight
+        offsetMillis =
+            Env.timezoneOffsetMinutes * 60 * 1000
 
         dayIndex =
-            millis // msPerDay
+            (Time.posixToMillis time + offsetMillis) // msPerDay
     in
     dayIndex - dayOffset
+
+
+isScheduledDay : Time.Zone -> Time.Posix -> Recurrence -> Bool
+isScheduledDay zone now recurrence =
+    case recurrence of
+        SpecificDays allowedDays ->
+            List.member (Time.toWeekday zone now) allowedDays
+
+        _ ->
+            True

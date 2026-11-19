@@ -7,3 +7,9 @@ module Env exposing (..)
 parentPin : String
 parentPin =
     "676767"
+
+{-| Minutes offset from UTC (60 = CET winter in Spain, 120 = CEST summer)
+-}
+timezoneOffsetMinutes : Int
+timezoneOffsetMinutes =
+    60

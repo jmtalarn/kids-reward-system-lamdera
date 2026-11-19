@@ -6,6 +6,7 @@ import Domain exposing (..)
 import Html.Styled exposing (..)
 import Html.Styled.Attributes exposing (css)
 import Html.Styled.Events exposing (onClick)
+import I18n
 import Styles
 import Time
 import Types exposing (..)
@@ -28,7 +29,7 @@ viewCalendarTab kid model =
                 |> List.filter (\t -> t.active && (List.isEmpty t.assignedTo || List.member kid.id t.assignedTo))
     in
     div []
-        [ viewWeekNav model
+        [ viewWeekNav kid model
         , div
             [ css
                 [ property "display" "grid"
@@ -38,13 +39,13 @@ viewCalendarTab kid model =
                 ]
             ]
             (List.map (viewDayCell kid model) weekDays)
-        , h3 [] [ text ("📋 Tasks for " ++ formatDayLabel model.zone model.selectedDate) ]
+        , h3 [] [ text (I18n.tasksForLabel model.lang ++ " " ++ formatDayLabel model.zone model.selectedDate) ]
         , div [ Styles.grid ] (List.map (viewCalendarTaskCard kid model) kidTasks)
         ]
 
 
-viewWeekNav : FrontendModel -> Html FrontendMsg
-viewWeekNav model =
+viewWeekNav : Participant -> FrontendModel -> Html FrontendMsg
+viewWeekNav kid model =
     let
         prevWeek =
             Time.millisToPosix (Time.posixToMillis model.selectedDate - 7 * msPerDay)
@@ -53,9 +54,9 @@ viewWeekNav model =
             Time.millisToPosix (Time.posixToMillis model.selectedDate + 7 * msPerDay)
     in
     div [ css [ displayFlex, justifyContent spaceBetween, alignItems center, marginBottom (rem 1) ] ]
-        [ button [ onClick (SelectCalendarDate prevWeek), Styles.actionButton True "475569" ] [ text "← Prev Week" ]
-        , button [ onClick (SelectCalendarDate model.now), Styles.actionButton True "2563EB" ] [ text "Today" ]
-        , button [ onClick (SelectCalendarDate nextWeek), Styles.actionButton True "475569" ] [ text "Next Week →" ]
+        [ button [ onClick (SelectCalendarDate prevWeek), Styles.actionButton True "475569" ] [ text (I18n.prevWeek model.lang) ]
+        , button [ onClick (SelectCalendarDate model.now), Styles.actionButton True "2563EB" ] [ text (I18n.today model.lang) ]
+        , button [ onClick (SelectCalendarDate nextWeek), Styles.actionButton True "475569" ] [ text (I18n.nextWeek model.lang) ]
         ]
 
 
