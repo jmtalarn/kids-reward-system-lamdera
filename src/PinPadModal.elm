@@ -44,6 +44,23 @@ viewPinPadModal model =
                 , h3 [ css [ marginTop zero, marginBottom (rem 0.25), color (hex "0F172A") ] ] [ text (I18n.parentPinTitle model.lang) ]
                 , p [ css [ marginTop zero, marginBottom (rem 1.25), fontSize (rem 0.85), color (hex "64748B") ] ] [ text (I18n.pinInstructions model.lang) ]
                 , viewPinDots model.pinLength (String.length model.pinInput)
+                , case model.errorMessage of
+                    Just err ->
+                        div
+                            [ css
+                                [ backgroundColor (hex "FEE2E2")
+                                , color (hex "991B1B")
+                                , fontSize (rem 0.85)
+                                , fontWeight (int 600)
+                                , padding2 (rem 0.45) (rem 0.75)
+                                , borderRadius (px 10)
+                                , marginBottom (rem 1)
+                                ]
+                            ]
+                            [ text err ]
+
+                    Nothing ->
+                        text ""
                 , viewKeypad (not (String.isEmpty model.pinInput)) model.lang
                 ]
             ]

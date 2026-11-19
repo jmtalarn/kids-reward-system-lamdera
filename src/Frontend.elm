@@ -2,27 +2,29 @@ module Frontend exposing (..)
 
 import AdminView exposing (viewAdminPanel)
 import Browser
+import Browser.Dom as Dom
 import Browser.Navigation as Nav
+import CalendarView exposing (viewCalendarTab)
 import CelebrationView exposing (viewCelebration)
 import Css exposing (..)
 import Dict
 import Domain exposing (..)
+import Env
 import Html.Styled exposing (..)
-import Html.Styled.Attributes exposing (css, placeholder, style, type_, value)
-import Html.Styled.Events exposing (onClick, onInput, onSubmit)
+import Html.Styled.Attributes exposing (css, style)
+import Html.Styled.Events exposing (onClick)
 import I18n
 import KidView exposing (viewHeroBanner, viewLedger, viewParticipantBar, viewRewardShop, viewTaskGrid)
 import Lamdera
+import PinPadModal exposing (viewPinPadModal)
 import Process
 import Styles
 import Task
 import Time
 import Types exposing (..)
 import Url
-import CalendarView exposing (viewCalendarTab)
-import Browser.Dom as Dom
-import PinPadModal exposing (viewPinPadModal)
-import Env
+import Browser.Events
+import Json.Decode as Decode
 
 
 app =
@@ -32,7 +34,7 @@ app =
         , onUrlChange = UrlChanged
         , update = update
         , updateFromBackend = updateFromBackend
-        , subscriptions = \_ -> Time.every 60000 Tick
+        , subscriptions = subscriptions
         , view = view
         }
 
@@ -81,6 +83,17 @@ init url key =
         , Task.perform Tick Time.now
         ]
     )
+subscriptions : FrontendModel -> Sub FrontendMsg
+subscriptions model =
+    Sub.batch
+        [ Time.every 60000 Tick
+        , if model.showPinPad then
+            Browser.Events.onKeyDown pinKeyDecoder
+
+          else
+            Sub.none
+        ]
+
 
 
 update : FrontendMsg -> FrontendModel -> ( FrontendModel, Cmd FrontendMsg )
@@ -99,33 +112,34 @@ update msg model =
             update (ClickCompleteTaskForDate pid tid model.now) model
 
         ClickCompleteTaskForDate pid tid targetDate ->
-                    let
-                        nextCount =
-                            model.celebrationCount + 1
+            let
+                nextCount =
+                    model.celebrationCount + 1
 
-                        cel =
-                            Dict.get tid model.tasks
-                                |> Maybe.map
-                                    (\t ->
-                                        { id = nextCount
-                                        , title = "🎉 +" ++ String.fromInt t.points ++ " Points!"
-                                        , subtitle = t.title
-                                        , isReward = False
-                                        }
-                                    )
-                    in
-                    ( { model | errorMessage = Nothing, celebration = cel, celebrationCount = nextCount }
-                    , Cmd.batch
-                        [ Lamdera.sendToBackend
-                            (CompleteTask
-                                { participantId = pid
-                                , taskId = tid
-                                , forDate = targetDate
+                cel =
+                    Dict.get tid model.tasks
+                        |> Maybe.map
+                            (\t ->
+                                { id = nextCount
+                                , title = "🎉 +" ++ String.fromInt t.points ++ " Points!"
+                                , subtitle = t.title
+                                , isReward = False
                                 }
                             )
-                        , Process.sleep 3500 |> Task.perform (\_ -> ClearCelebration nextCount)
-                        ]
+            in
+            ( { model | errorMessage = Nothing, celebration = cel, celebrationCount = nextCount }
+            , Cmd.batch
+                [ Lamdera.sendToBackend
+                    (CompleteTask
+                        { participantId = pid
+                        , taskId = tid
+                        , forDate = targetDate
+                        }
                     )
+                , Process.sleep 3500 |> Task.perform (\_ -> ClearCelebration nextCount)
+                ]
+            )
+
         ClickRedeemReward pid rid ->
             let
                 nextCount =
@@ -250,6 +264,7 @@ update msg model =
                                 }
                             )
                         )
+
         ToggleTaskDay day ->
             let
                 updatedDays =
@@ -263,6 +278,7 @@ update msg model =
 
         SetTaskDays days ->
             ( { model | newTaskDays = days }, Cmd.none )
+
         UpdateNewRewardTitle val ->
             ( { model | newRewardTitle = val }, Cmd.none )
 
@@ -342,30 +358,32 @@ update msg model =
             ( { model | zone = z }, Cmd.none )
 
         Tick t ->
-                ( { model
-                    | now = t
-                    , selectedDate =
-                        if Time.posixToMillis model.selectedDate == 0 then
-                            t
+            ( { model
+                | now = t
+                , selectedDate =
+                    if Time.posixToMillis model.selectedDate == 0 then
+                        t
 
-                        else
-                            model.selectedDate
-                }
-                , Cmd.none
-                )
+                    else
+                        model.selectedDate
+              }
+            , Cmd.none
+            )
 
         SelectTab tab ->
             ( { model | activeTab = tab }, Cmd.none )
-        
+
         SelectCalendarDate date ->
-         ( { model | selectedDate = date }, Cmd.none )
-        
+            ( { model | selectedDate = date }, Cmd.none )
+
         ClickDeleteTransaction txId ->
             ( model
             , Lamdera.sendToBackend (DeleteTransaction txId)
             )
+
         SetLanguage newLang ->
-         ( { model | lang = newLang }, Cmd.none )
+            ( { model | lang = newLang }, Cmd.none )
+
         StartEditKid kid ->
             ( { model | editingKidId = Just kid.id, newKidName = kid.name, newKidAvatar = kid.avatar, newKidColor = kid.color }
             , Task.attempt (\_ -> NoOp) (Dom.focus "edit-kid-input")
@@ -391,7 +409,7 @@ update msg model =
                 , newTaskRecurrence = task.recurrence
                 , newTaskDays = days
                 , newTaskAssignedTo = task.assignedTo
-            }
+              }
             , Task.attempt (\_ -> NoOp) (Dom.focus "edit-task-input")
             )
 
@@ -405,6 +423,7 @@ update msg model =
 
         CancelEditReward ->
             ( { model | editingRewardId = Nothing, newRewardTitle = "", newRewardCost = "30", newRewardEmoji = "🍦" }, Cmd.none )
+
         OpenPinPad ->
             ( { model | showPinPad = True, pinInput = "", errorMessage = Nothing }, Cmd.none )
 
@@ -422,13 +441,17 @@ update msg model =
                 )
 
             else
-                ( { model | pinInput = nextPin }, Cmd.none )
-
+                ( { model | errorMessage = Nothing, pinInput = nextPin }, Cmd.none )
 
         BackspacePin ->
-            ( { model | pinInput = String.dropRight 1 model.pinInput }, Cmd.none )
+            ( { model | errorMessage = Nothing, pinInput = String.dropRight 1 model.pinInput }
+            , Cmd.none
+            )       
 
-        NoOp -> ( model, Cmd.none )
+        NoOp ->
+            ( model, Cmd.none )
+
+
 updateFromBackend : ToFrontend -> FrontendModel -> ( FrontendModel, Cmd FrontendMsg )
 updateFromBackend msg model =
     case msg of
@@ -457,19 +480,19 @@ updateFromBackend msg model =
             )
 
         ParentPinVerified ok ->
-         ( { model
-             | isParentMode = ok
-             , showPinPad = False
-             , pinInput = ""
-             , activeTab =
-                 if ok then
-                     AdminTab
+            ( { model
+                | isParentMode = ok
+                , showPinPad = False
+                , pinInput = ""
+                , activeTab =
+                    if ok then
+                        AdminTab
 
-                 else
-                     TasksTab
-           }
-         , Cmd.none
-         )
+                    else
+                        TasksTab
+              }
+            , Cmd.none
+            )
 
         ActionFailed err ->
             ( { model | errorMessage = Just err }, Cmd.none )
@@ -487,17 +510,14 @@ viewPage model =
     div [ Styles.pageShell, css [ paddingBottom (rem 6) ] ]
         [ div [ Styles.container ]
             [ viewHeader model
-            , viewError model.errorMessage model.lang
             , viewParticipantBar model
             , viewActiveTab model
             ]
+        , viewError model
         , viewPinPadModal model
         , viewCelebration model.celebration
         , viewBottomTabs model
         ]
-
-
-
 
 
 
@@ -519,13 +539,15 @@ viewActiveTab model =
 
                 Nothing ->
                     p [] [ text (I18n.noKidsYet model.lang) ]
-        CalendarTab ->
-         case maybeKid of
-             Just kid ->
-                 viewCalendarTab kid model
 
-             Nothing ->
-                 p [] [ text (I18n.selectOrAddKid model.lang) ]
+        CalendarTab ->
+            case maybeKid of
+                Just kid ->
+                    viewCalendarTab kid model
+
+                Nothing ->
+                    p [] [ text (I18n.selectOrAddKid model.lang) ]
+
         ShopTab ->
             case maybeKid of
                 Just kid ->
@@ -633,26 +655,50 @@ viewHeader model =
     div [ css [ displayFlex, justifyContent spaceBetween, alignItems center, marginBottom (rem 1.25) ] ]
         [ h1 [ css [ margin zero, fontSize (rem 1.6) ] ] [ text (I18n.appTitle model.lang) ]
         , if model.isParentMode then
-             button [ onClick LockParentMode, Styles.actionButton True "475569" ] [ text <|  (I18n.lockParentButton model.lang) ]
+            button [ onClick LockParentMode, Styles.actionButton True "475569" ] [ text <| I18n.lockParentButton model.lang ]
 
-         else
-            button [ onClick OpenPinPad, Styles.actionButton True "2563EB" ] [ text  <| (I18n.parentModeButton model.lang) ]
-
-      
+          else
+            button [ onClick OpenPinPad, Styles.actionButton True "2563EB" ] [ text <| I18n.parentModeButton model.lang ]
         ]
 
 
-viewError : Maybe String -> Language -> Html FrontendMsg
-viewError maybeErr lang =
-    case maybeErr of
-        Just err ->
-            div [ css [ backgroundColor (hex "FEE2E2"), color (hex "991B1B"), padding (rem 0.75), borderRadius (px 10), marginBottom (rem 1) ] ]
-                [ text err
-                , button [ onClick DismissError, css [ marginLeft (rem 1) ] ] [ text (I18n.closeBtnSymbol lang) ]
-                ]
+viewError : FrontendModel -> Html FrontendMsg
+viewError model =
+    if model.showPinPad then
+        text ""
 
-        Nothing ->
-            text ""
+    else
+        case model.errorMessage of
+            Just err ->
+                div
+                    [ onClick DismissError
+                    , css
+                        [ position fixed
+                        , bottom (rem 5.5)
+                        , left (pct 50)
+                        , transform (translateX (pct -50))
+                        , zIndex (int 1200)
+                        , backgroundColor (hex "1E293B")
+                        , color (hex "FFFFFF")
+                        , padding2 (rem 0.75) (rem 1.25)
+                        , borderRadius (px 14)
+                        , boxShadow4 zero (px 10) (px 25) (rgba 15 23 42 0.25)
+                        , displayFlex
+                        , alignItems center
+                        , property "gap" "0.75rem"
+                        , fontSize (rem 0.9)
+                        , fontWeight (int 600)
+                        , cursor pointer
+                        , maxWidth (vw 90)
+                        ]
+                    ]
+                    [ span [] [ text ("⚠️ " ++ err) ]
+                    , span [ css [ opacity (num 0.7), fontSize (rem 0.8) ] ] [ text "✕" ]
+                    ]
+
+            Nothing ->
+                text ""
+
 
 
 viewParticipantSwitcher : FrontendModel -> Html FrontendMsg
@@ -792,3 +838,51 @@ viewLangSwitcher current =
             )
             [ ( Ca, "CA" ), ( Es, "ES" ), ( En, "EN" ) ]
         )
+pinKeyDecoder : Decode.Decoder FrontendMsg
+pinKeyDecoder =
+    Decode.field "key" Decode.string
+        |> Decode.andThen
+            (\key ->
+                case key of
+                    "0" ->
+                        Decode.succeed (PressPinDigit "0")
+
+                    "1" ->
+                        Decode.succeed (PressPinDigit "1")
+
+                    "2" ->
+                        Decode.succeed (PressPinDigit "2")
+
+                    "3" ->
+                        Decode.succeed (PressPinDigit "3")
+
+                    "4" ->
+                        Decode.succeed (PressPinDigit "4")
+
+                    "5" ->
+                        Decode.succeed (PressPinDigit "5")
+
+                    "6" ->
+                        Decode.succeed (PressPinDigit "6")
+
+                    "7" ->
+                        Decode.succeed (PressPinDigit "7")
+
+                    "8" ->
+                        Decode.succeed (PressPinDigit "8")
+
+                    "9" ->
+                        Decode.succeed (PressPinDigit "9")
+
+                    "Backspace" ->
+                        Decode.succeed BackspacePin
+
+                    "Escape" ->
+                        Decode.succeed ClosePinPad
+
+                    "Enter" ->
+                        Decode.succeed SubmitPin
+
+                    _ ->
+                        Decode.fail "Ignored key"
+            )

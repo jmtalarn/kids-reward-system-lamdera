@@ -1,13 +1,14 @@
 module Backend exposing (..)
 
-import Dict exposing (Dict)
+import Dict
 import Domain exposing (..)
 import Env
 import Lamdera exposing (ClientId, SessionId)
+import Set
 import Task
 import Time
 import Types exposing (..)
-import Set exposing (Set)
+
 
 app =
     Lamdera.backend
@@ -113,7 +114,6 @@ updateFromFrontend sessionId clientId msg model =
 
             else
                 ( model, Lamdera.sendToFrontend clientId (ActionFailed "Parent authorization required.") )
-
 
 
 update : BackendMsg -> BackendModel -> ( BackendModel, Cmd BackendMsg )
@@ -260,7 +260,7 @@ handleTimedAction clientId msg now model =
 
                 Nothing ->
                     ( model, Lamdera.sendToFrontend clientId (ActionFailed "Participant not found.") )
-        
+
         CompleteTask { participantId, taskId, forDate } ->
             case ( Dict.get participantId model.participants, Dict.get taskId model.tasks ) of
                 ( Just _, Just task ) ->
@@ -300,7 +300,6 @@ handleTimedAction clientId msg now model =
                 _ ->
                     ( model, Lamdera.sendToFrontend clientId (ActionFailed "Invalid participant or task.") )
 
-
         LogoutParent ->
             ( model, Cmd.none )
 
@@ -323,12 +322,14 @@ handleTimedAction clientId msg now model =
                     { model | rewards = updatedRewards }
             in
             ( updatedModel, Lamdera.broadcast (snapshotFor updatedModel) )
+
         DeleteTransaction txId ->
             let
                 updatedModel =
                     { model | transactions = Dict.remove txId model.transactions }
             in
             ( updatedModel, Lamdera.broadcast (snapshotFor updatedModel) )
+
         UpdateParticipant data ->
             let
                 updated =
@@ -384,6 +385,7 @@ handleTimedAction clientId msg now model =
             in
             ( updatedModel, Lamdera.broadcast (snapshotFor updatedModel) )
 
+
 cooldownMessage : Recurrence -> String
 cooldownMessage recurrence =
     case recurrence of
@@ -398,9 +400,10 @@ cooldownMessage recurrence =
 
         Monthly ->
             "Already completed this month!"
-        
+
         SpecificDays _ ->
             "Not scheduled for this day (or already completed today)!"
+
 
 snapshotFor : BackendModel -> ToFrontend
 snapshotFor model =
@@ -411,6 +414,7 @@ snapshotFor model =
         , transactions = model.transactions
         , pinLength = String.length Env.parentPin
         }
+
 
 serverZone : Time.Zone
 serverZone =
