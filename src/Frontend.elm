@@ -447,7 +447,11 @@ update msg model =
             ( { model | errorMessage = Nothing, pinInput = String.dropRight 1 model.pinInput }
             , Cmd.none
             )       
-
+        
+        ClickToggleGoal pid rid ->
+            ( model
+            , Lamdera.sendToBackend (ToggleParticipantGoal { participantId = pid, rewardId = rid })
+            )
         NoOp ->
             ( model, Cmd.none )
 
@@ -533,13 +537,12 @@ viewActiveTab model =
             case maybeKid of
                 Just kid ->
                     div []
-                        [ viewHeroBanner model.lang kid (balanceFor kid.id model.transactions)
+                        [ viewHeroBanner model.lang kid (balanceFor kid.id model.transactions) model.rewards
                         , viewTaskGrid model.lang kid model
                         ]
 
                 Nothing ->
-                    p [] [ text (I18n.noKidsYet model.lang) ]
-
+                    p [] [ text "No kids yet. Unlock Parent Mode to add one!" ]
         CalendarTab ->
             case maybeKid of
                 Just kid ->
@@ -556,13 +559,12 @@ viewActiveTab model =
                             balanceFor kid.id model.transactions
                     in
                     div []
-                        [ viewHeroBanner model.lang kid pts
+                        [ viewHeroBanner model.lang kid pts model.rewards
                         , viewRewardShop kid pts model
                         ]
 
                 Nothing ->
-                    p [] [ text (I18n.selectOrAddKid model.lang) ]
-
+                    p [] [ text "Select or add a kid first." ]
         ActivityTab ->
             viewLedger model
 

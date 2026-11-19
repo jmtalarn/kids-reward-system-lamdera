@@ -26,6 +26,7 @@ type alias Participant =
     , avatar : String
     , color : String
     , createdAt : Time.Posix
+    , goalRewardIds : List RewardId
     }
 
 

@@ -5,7 +5,7 @@ import Css exposing (..)
 import Dict
 import Domain exposing (..)
 import Html.Styled exposing (..)
-import Html.Styled.Attributes exposing (css)
+import Html.Styled.Attributes exposing (css, type_)
 import Html.Styled.Events exposing (onClick)
 import Styles
 import Types exposing (..)
@@ -54,7 +54,7 @@ viewParticipantBar model =
                         , div [ css [ textAlign left ] ]
                             [ div [] [ text p.name ]
                             , div [ css [ fontSize (rem 0.85), color (hex (String.dropLeft 1 p.color)) ] ]
-                                [ text ("⭐ " ++ String.fromInt pts ++ " pts") ]
+                                [ text ("★ " ++ String.fromInt pts ++ " pts") ]
                             ]
                         ]
                 )
@@ -74,8 +74,14 @@ viewParticipantBar model =
 --         ]
 
 
-viewHeroBanner : Language ->Participant -> Int -> Html FrontendMsg
-viewHeroBanner lang kid points =
+viewHeroBanner : Language -> Participant -> Int -> Dict.Dict RewardId Reward -> Html FrontendMsg
+viewHeroBanner lang kid points rewards =
+    let
+        wishlist =
+            kid.goalRewardIds
+                |> List.filterMap (\rid -> Dict.get rid rewards)
+                |> List.filter .active
+    in
     div
         [ css
             [ backgroundColor (hex (String.dropLeft 1 kid.color))
@@ -83,22 +89,47 @@ viewHeroBanner lang kid points =
             , padding (rem 1.5)
             , borderRadius (px 20)
             , marginBottom (rem 1.75)
-            , displayFlex
-            , justifyContent spaceBetween
-            , alignItems center
             ]
         ]
-        [ div [ Styles.row 1 ]
-            [ span [ css [ fontSize (rem 3) ] ] [ text kid.avatar ]
-            , div []
-                [ div [ css [ fontSize (rem 0.9), opacity (num 0.9) ] ] [ text <| I18n.welcomeBack lang ]
-                , h2 [ css [ margin zero, fontSize (rem 1.75) ] ] [ text kid.name ]
+        [ div [ css [ displayFlex, justifyContent spaceBetween, alignItems center ] ]
+            [ div [ Styles.row 1 ]
+                [ span [ css [ fontSize (rem 3) ] ] [ text kid.avatar ]
+                , div []
+                    [ div [ css [ fontSize (rem 0.9), opacity (num 0.9) ] ] [ text (I18n.welcomeBack lang) ]
+                    , h2 [ css [ margin zero, fontSize (rem 1.75) ] ] [ text kid.name ]
+                    ]
+                ]
+            , div [ css [ backgroundColor (rgba 255 255 255 0.2), padding2 (rem 0.75) (rem 1.25), borderRadius (px 14), textAlign center ] ]
+                [ div [ css [ fontSize (rem 1.75), fontWeight (int 800) ] ] [ text (String.fromInt points) ]
+                , div [ css [ fontSize (rem 0.8), textTransform uppercase ] ] [ text (I18n.pointsLabel lang) ]
                 ]
             ]
-        , div [ css [ backgroundColor (rgba 255 255 255 0.2), padding2 (rem 0.75) (rem 1.25), borderRadius (px 14), textAlign center ] ]
-            [ div [ css [ fontSize (rem 1.75), fontWeight (int 800) ] ] [ text (String.fromInt points) ]
-            , div [ css [ fontSize (rem 0.8), textTransform uppercase ] ] [ text <| I18n.pointsLabel lang ]
+        , if List.isEmpty wishlist then
+            text ""
+
+          else
+            div [ css [ marginTop (rem 1.15), paddingTop (rem 1), borderTop3 (px 1) solid (rgba 255 255 255 0.25), displayFlex, flexDirection column, property "gap" "0.65rem" ] ]
+                (List.map (viewGoalRow points) wishlist)
+        ]
+
+
+viewGoalRow : Int -> Reward -> Html FrontendMsg
+viewGoalRow points reward =
+    let
+        pct =
+            if reward.cost <= 0 then
+                100
+
+            else
+                clamp 0 100 ((toFloat points / toFloat reward.cost) * 100) |> Basics.round
+    in
+    div []
+        [ div [ css [ displayFlex, justifyContent spaceBetween, fontSize (rem 0.85), fontWeight (int 700), marginBottom (rem 0.25) ] ]
+            [ span [] [ text ("🎯 " ++ reward.emoji ++ " " ++ reward.title) ]
+            , span [] [ text (String.fromInt points ++ " / " ++ String.fromInt reward.cost ++ " pts") ]
             ]
+        , div [ css [ height (px 8), backgroundColor (rgba 255 255 255 0.25), borderRadius (px 999), overflow hidden ] ]
+            [ div [ css [ height (Css.pct 100), width (Css.pct (toFloat pct)), backgroundColor (hex "FFFFFF") ] ] [] ]
         ]
 
 
@@ -185,29 +216,61 @@ viewRewardShop kid points model =
     in
     div []
         [ h3 [] [ text (I18n.rewardShop model.lang) ]
-        , div [ Styles.grid ] (List.map (viewRewardCard kid points model) activeRewards)
+        , div [ Styles.grid ] (List.map (viewRewardCard model.lang kid points) activeRewards)
         ]
 
 
-viewRewardCard : Participant -> Int -> FrontendModel -> Reward -> Html FrontendMsg
-viewRewardCard kid points model reward =
+viewRewardCard : Language -> Participant -> Int -> Reward -> Html FrontendMsg
+viewRewardCard lang kid points reward =
     let
         canAfford =
             points >= reward.cost
+
+        isGoal =
+            List.member reward.id kid.goalRewardIds
 
         pct =
             if reward.cost <= 0 then
                 100
 
             else
-                (clamp 0 100 ((toFloat points / toFloat reward.cost) * 100) ) |> Basics.round
+                clamp 0 100 ((toFloat points / toFloat reward.cost) * 100) |> Basics.round
     in
     div [ Styles.card [ displayFlex, flexDirection column, justifyContent spaceBetween, property "gap" "0.75rem" ] ]
-        [ div [ Styles.row 0.75 ]
-            [ span [ css [ fontSize (rem 2) ] ] [ text reward.emoji ]
-            , div []
-                [ div [ css [ fontWeight (int 700) ] ] [ text reward.title ]
-                , div [ css [ fontSize (rem 0.85), color (hex "64748B") ] ] [ text (String.fromInt reward.cost ++ " pts") ]
+        [ div [ css [ displayFlex, justifyContent spaceBetween, alignItems flexStart ] ]
+            [ div [ Styles.row 0.75 ]
+                [ span [ css [ fontSize (rem 2) ] ] [ text reward.emoji ]
+                , div []
+                    [ div [ css [ fontWeight (int 700) ] ] [ text reward.title ]
+                    , div [ css [ fontSize (rem 0.85), color (hex "64748B") ] ] [ text (String.fromInt reward.cost ++ " pts") ]
+                    ]
+                ]
+            , button
+                [ type_ "button"
+                , onClick (ClickToggleGoal kid.id reward.id)
+                , css
+                    [ padding2 (rem 0.3) (rem 0.55)
+                    , borderRadius (px 10)
+                    , border zero
+                    , cursor pointer
+                    , fontSize (rem 1)
+                    , color <| hex "F59E0B"
+                    , backgroundColor
+                        (if isGoal then
+                            hex "FEF3C7"
+
+                         else
+                            hex "F1F5F9"
+                        )
+                    ]
+                ]
+                [ text
+                    (if isGoal then
+                        "★"
+
+                     else
+                        "☆"
+                    )
                 ]
             ]
         , div []
@@ -230,10 +293,10 @@ viewRewardCard kid points model reward =
             , div [ css [ fontSize (rem 0.78), color (hex "64748B") ] ]
                 [ text
                     (if canAfford then
-                        I18n.readyToRedeem model.lang
+                        I18n.readyToRedeem lang
 
                      else
-                        I18n.morePtsNeeded model.lang (reward.cost - points) pct
+                        I18n.morePtsNeeded lang (reward.cost - points) pct
                     )
                 ]
             ]
@@ -244,10 +307,10 @@ viewRewardCard kid points model reward =
             ]
             [ text
                 (if canAfford then
-                    I18n.redeemNow model.lang
+                    I18n.redeemNow lang
 
                  else
-                    I18n.lockedLabel model.lang
+                    I18n.lockedLabel lang
                 )
             ]
         ]

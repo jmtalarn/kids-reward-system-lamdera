@@ -31,6 +31,7 @@ init =
             , avatar = "🦁"
             , color = "#F59E0B"
             , createdAt = epoch
+            , goalRewardIds = []
             }
 
         starterTask =
@@ -108,6 +109,8 @@ updateFromFrontend sessionId clientId msg model =
         RedeemReward _ ->
             ( model, Task.perform (GotTimeForToBackend clientId msg) Time.now )
 
+        ToggleParticipantGoal _ ->
+                ( model, Task.perform (GotTimeForToBackend clientId msg) Time.now )
         _ ->
             if Set.member sessionId model.authenticatedSessions then
                 ( model, Task.perform (GotTimeForToBackend clientId msg) Time.now )
@@ -141,6 +144,7 @@ handleTimedAction clientId msg now model =
                     , avatar = data.avatar
                     , color = data.color
                     , createdAt = now
+                    , goalRewardIds = []
                     }
 
                 updatedModel =
@@ -363,7 +367,25 @@ handleTimedAction clientId msg now model =
                     { model | tasks = updated }
             in
             ( updatedModel, Lamdera.broadcast (snapshotFor updatedModel) )
+       
+        ToggleParticipantGoal { participantId, rewardId } ->
+                    let
+                        toggleGoal p =
+                            let
+                                nextGoals =
+                                    if List.member rewardId p.goalRewardIds then
+                                        List.filter ((/=) rewardId) p.goalRewardIds
 
+                                    else
+                                        p.goalRewardIds ++ [ rewardId ]
+                            in
+                            { p | goalRewardIds = nextGoals }
+
+                        updatedModel =
+                            { model | participants = Dict.update participantId (Maybe.map toggleGoal) model.participants }
+                    in
+                    ( updatedModel, Lamdera.broadcast (snapshotFor updatedModel) )
+                    
         UpdateReward data ->
             let
                 updated =

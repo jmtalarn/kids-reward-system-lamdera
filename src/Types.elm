@@ -110,6 +110,7 @@ type FrontendMsg
     | CancelEditTask
     | StartEditReward Reward
     | CancelEditReward
+    | ClickToggleGoal ParticipantId RewardId
     | NoOp
 
 
@@ -129,6 +130,7 @@ type ToBackend
     | UpdateParticipant { id : ParticipantId, name : String, avatar : String, color : String }
     | UpdateTask { id : TaskId, title : String, description : String, points : Int, recurrence : Recurrence, assignedTo : List ParticipantId }
     | UpdateReward { id : RewardId, title : String, description : String, cost : Int, emoji : String }
+    | ToggleParticipantGoal { participantId : ParticipantId, rewardId : RewardId }
 
 
 type BackendMsg
