@@ -261,13 +261,20 @@ handleTimedAction clientId msg now model =
                 Nothing ->
                     ( model, Lamdera.sendToFrontend clientId (ActionFailed "Participant not found.") )
         
-        CompleteTask { participantId, taskId } ->
+        CompleteTask { participantId, taskId, forDate } ->
             case ( Dict.get participantId model.participants, Dict.get taskId model.tasks ) of
                 ( Just _, Just task ) ->
+                    let
+                        isFuture =
+                            Time.posixToMillis forDate > (Time.posixToMillis now + 86400000)
+                    in
                     if not task.active then
                         ( model, Lamdera.sendToFrontend clientId (ActionFailed "This task is inactive.") )
 
-                    else if not (canClaimTask Time.utc now participantId task model.transactions) then
+                    else if isFuture then
+                        ( model, Lamdera.sendToFrontend clientId (ActionFailed "Cannot complete tasks for future dates!") )
+
+                    else if not (canClaimTask Time.utc forDate participantId task model.transactions) then
                         ( model, Lamdera.sendToFrontend clientId (ActionFailed (cooldownMessage task.recurrence)) )
 
                     else
@@ -278,7 +285,7 @@ handleTimedAction clientId msg now model =
                                 , amount = task.points
                                 , type_ = EarnedFromTask taskId
                                 , description = "Completed: " ++ task.title
-                                , timestamp = now
+                                , timestamp = forDate
                                 , approvedBy = Nothing
                                 }
 
@@ -292,6 +299,7 @@ handleTimedAction clientId msg now model =
 
                 _ ->
                     ( model, Lamdera.sendToFrontend clientId (ActionFailed "Invalid participant or task.") )
+
 
         LogoutParent ->
             ( model, Cmd.none )

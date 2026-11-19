@@ -1,4 +1,5 @@
-module KidView exposing (viewKidDashboard, viewLedger, viewParticipantBar)
+module KidView exposing (viewHeroBanner, viewLedger, viewParticipantBar, viewRewardShop, viewTaskGrid)
+
 
 import Css exposing (..)
 import Dict

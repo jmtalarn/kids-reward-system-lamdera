@@ -3,21 +3,22 @@ module Frontend exposing (..)
 import AdminView exposing (viewAdminPanel)
 import Browser
 import Browser.Navigation as Nav
+import CelebrationView exposing (viewCelebration)
+import Css exposing (..)
 import Dict
 import Domain exposing (..)
 import Html.Styled exposing (..)
 import Html.Styled.Attributes exposing (css, placeholder, style, type_, value)
 import Html.Styled.Events exposing (onClick, onInput, onSubmit)
-import Css exposing (..)
-import Styles
+import KidView exposing (viewHeroBanner, viewLedger, viewParticipantBar, viewRewardShop, viewTaskGrid)
 import Lamdera
+import Process
+import Styles
+import Task
+import Time
 import Types exposing (..)
 import Url
-import KidView exposing (viewKidDashboard, viewLedger, viewParticipantBar)
-import Time
-import Task
-
-
+import CalendarView exposing (viewCalendarTab)
 
 
 -- Inside view : FrontendModel -> Browser.Document FrontendMsg
@@ -30,7 +31,7 @@ app =
         , onUrlChange = UrlChanged
         , update = update
         , updateFromBackend = updateFromBackend
-        , subscriptions =  \_ -> Time.every 60000 Tick
+        , subscriptions = \_ -> Time.every 60000 Tick
         , view = view
         }
 
@@ -61,6 +62,10 @@ init url key =
       , bonusReason = ""
       , newKidColor = "#3B82F6"
       , newTaskAssignedTo = []
+      , activeTab = TasksTab
+      , celebration = Nothing
+      , celebrationCount = 0
+      , selectedDate = Time.millisToPosix 0
       }
     , Cmd.batch
         [ Lamdera.sendToBackend RequestInitialState
@@ -83,14 +88,68 @@ update msg model =
             ( { model | selectedParticipant = maybeId }, Cmd.none )
 
         ClickCompleteTask pid tid ->
-            ( { model | errorMessage = Nothing }
-            , Lamdera.sendToBackend (CompleteTask { participantId = pid, taskId = tid })
+            update (ClickCompleteTaskForDate pid tid model.now) model
+            
+        ClickCompleteTaskForDate pid tid targetDate ->
+                    let
+                        nextCount =
+                            model.celebrationCount + 1
+
+                        cel =
+                            Dict.get tid model.tasks
+                                |> Maybe.map
+                                    (\t ->
+                                        { id = nextCount
+                                        , title = "🎉 +" ++ String.fromInt t.points ++ " Points!"
+                                        , subtitle = t.title
+                                        , isReward = False
+                                        }
+                                    )
+                    in
+                    ( { model | errorMessage = Nothing, celebration = cel, celebrationCount = nextCount }
+                    , Cmd.batch
+                        [ Lamdera.sendToBackend
+                            (CompleteTask
+                                { participantId = pid
+                                , taskId = tid
+                                , forDate = targetDate
+                                }
+                            )
+                        , Process.sleep 3500 |> Task.perform (\_ -> ClearCelebration nextCount)
+                        ]
+                    )
+        ClickRedeemReward pid rid ->
+            let
+                nextCount =
+                    model.celebrationCount + 1
+
+                maybeReward =
+                    Dict.get rid model.rewards
+
+                cel =
+                    maybeReward
+                        |> Maybe.map
+                            (\r ->
+                                { id = nextCount
+                                , title = r.emoji ++ " Reward Unlocked!"
+                                , subtitle = r.title
+                                , isReward = True
+                                }
+                            )
+            in
+            ( { model | errorMessage = Nothing, celebration = cel, celebrationCount = nextCount }
+            , Cmd.batch
+                [ Lamdera.sendToBackend (RedeemReward { participantId = pid, rewardId = rid })
+                , Process.sleep 3500 |> Task.perform (\_ -> ClearCelebration nextCount)
+                ]
             )
 
-        ClickRedeemReward pid rid ->
-            ( { model | errorMessage = Nothing }
-            , Lamdera.sendToBackend (RedeemReward { participantId = pid, rewardId = rid })
-            )
+        ClearCelebration id ->
+            if Maybe.map .id model.celebration == Just id then
+                ( { model | celebration = Nothing }, Cmd.none )
+
+            else
+                ( model, Cmd.none )
 
         DismissError ->
             ( { model | errorMessage = Nothing }, Cmd.none )
@@ -104,7 +163,13 @@ update msg model =
             )
 
         LockParentMode ->
-            ( { model | isParentMode = False, pinInput = "" }, Lamdera.sendToBackend LogoutParent )
+            ( { model
+                | isParentMode = False
+                , pinInput = ""
+                , activeTab = TasksTab
+              }
+            , Lamdera.sendToBackend LogoutParent
+            )
 
         UpdateNewKidName val ->
             ( { model | newKidName = val }, Cmd.none )
@@ -157,7 +222,6 @@ update msg model =
                 _ ->
                     ( { model | errorMessage = Just "Points must be a valid number." }, Cmd.none )
 
-
         UpdateNewRewardTitle val ->
             ( { model | newRewardTitle = val }, Cmd.none )
 
@@ -208,9 +272,9 @@ update msg model =
 
                 Nothing ->
                     ( { model | errorMessage = Just "Adjustment must be a number." }, Cmd.none )
-     
+
         SelectNewKidColor hexColor ->
-         ( { model | newKidColor = hexColor }, Cmd.none )
+            ( { model | newKidColor = hexColor }, Cmd.none )
 
         ToggleTaskAssignee pid ->
             let
@@ -232,12 +296,28 @@ update msg model =
             ( model
             , Lamdera.sendToBackend (ToggleRewardActive rid)
             )
-        
+
         GotZone z ->
             ( { model | zone = z }, Cmd.none )
 
         Tick t ->
-            ( { model | now = t }, Cmd.none )
+                ( { model
+                    | now = t
+                    , selectedDate =
+                        if Time.posixToMillis model.selectedDate == 0 then
+                            t
+
+                        else
+                            model.selectedDate
+                }
+                , Cmd.none
+                )
+
+        SelectTab tab ->
+            ( { model | activeTab = tab }, Cmd.none )
+        
+        SelectCalendarDate date ->
+         ( { model | selectedDate = date }, Cmd.none )
 
 updateFromBackend : ToFrontend -> FrontendModel -> ( FrontendModel, Cmd FrontendMsg )
 updateFromBackend msg model =
@@ -267,10 +347,22 @@ updateFromBackend msg model =
             )
 
         ParentPinVerified ok ->
-            ( { model | isParentMode = ok, pinInput = "" }, Cmd.none )
+            ( { model
+                | isParentMode = ok
+                , pinInput = ""
+                , activeTab =
+                    if ok then
+                        AdminTab
+
+                    else
+                        TasksTab
+              }
+            , Cmd.none
+            )
 
         ActionFailed err ->
             ( { model | errorMessage = Just err }, Cmd.none )
+
 
 view : FrontendModel -> Browser.Document FrontendMsg
 view model =
@@ -278,26 +370,165 @@ view model =
     , body = [ toUnstyled (viewPage model) ]
     }
 
+
 viewPage : FrontendModel -> Html FrontendMsg
 viewPage model =
-    div [ Styles.pageShell ]
+    div [ Styles.pageShell, css [ paddingBottom (rem 6) ] ]
         [ div [ Styles.container ]
             [ viewHeader model
             , viewError model.errorMessage
             , viewParticipantBar model
-            , case model.selectedParticipant |> Maybe.andThen (\pid -> Dict.get pid model.participants) of
+            , viewActiveTab model
+            ]
+        , viewCelebration model.celebration
+        , viewBottomTabs model
+        ]
+
+
+
+-- div [ Styles.pageShell ]
+--     [ div [ Styles.container ]
+--         [ viewHeader model
+--         , viewError model.errorMessage
+--         , viewParticipantBar model
+--         , case model.selectedParticipant |> Maybe.andThen (\pid -> Dict.get pid model.participants) of
+--             Just kid ->
+--                 viewKidDashboard kid model
+--             Nothing ->
+--                 p [] [ text "No kids yet. Unlock Parent Mode to add one!" ]
+--         , if model.isParentMode then
+--             viewAdminPanel model
+--           else
+--             text ""
+--         , viewLedger model
+--         ]
+--     ]
+
+
+viewActiveTab : FrontendModel -> Html FrontendMsg
+viewActiveTab model =
+    let
+        maybeKid =
+            model.selectedParticipant
+                |> Maybe.andThen (\pid -> Dict.get pid model.participants)
+    in
+    case model.activeTab of
+        TasksTab ->
+            case maybeKid of
                 Just kid ->
-                    viewKidDashboard kid model
+                    div []
+                        [ viewHeroBanner kid (balanceFor kid.id model.transactions)
+                        , viewTaskGrid kid model
+                        ]
 
                 Nothing ->
                     p [] [ text "No kids yet. Unlock Parent Mode to add one!" ]
-            , if model.isParentMode then
+        CalendarTab ->
+         case maybeKid of
+             Just kid ->
+                 viewCalendarTab kid model
+
+             Nothing ->
+                 p [] [ text "Select or add a kid first." ]
+        ShopTab ->
+            case maybeKid of
+                Just kid ->
+                    let
+                        pts =
+                            balanceFor kid.id model.transactions
+                    in
+                    div []
+                        [ viewHeroBanner kid pts
+                        , viewRewardShop kid pts model
+                        ]
+
+                Nothing ->
+                    p [] [ text "Select or add a kid first." ]
+
+        ActivityTab ->
+            viewLedger model
+
+        AdminTab ->
+            if model.isParentMode then
                 viewAdminPanel model
 
-              else
-                text ""
-            , viewLedger model
+            else
+                div [ Styles.card [ textAlign center ] ]
+                    [ p [] [ text "🔒 Unlock Parent Mode at the top to manage kids, tasks, and rewards." ] ]
+
+
+viewBottomTabs : FrontendModel -> Html FrontendMsg
+viewBottomTabs model =
+    let
+        tabs =
+            [ ( TasksTab, "🎯", "Missions" )
+            , ( CalendarTab, "📅", "Calendar" )
+            , ( ShopTab, "🎁", "Shop" )
+            , ( ActivityTab, "📜", "Activity" )
             ]
+                ++ (if model.isParentMode then
+                        [ ( AdminTab, "🛠️", "Parent" ) ]
+
+                    else
+                        []
+                   )
+    in
+    nav
+        [ css
+            [ position fixed
+            , bottom zero
+            , left zero
+            , right zero
+            , backgroundColor (hex "FFFFFF")
+            , borderTop3 (px 2) solid (hex "E2E8F0")
+            , displayFlex
+            , justifyContent center
+            , padding2 (rem 0.5) (rem 0.75)
+            , boxShadow4 zero (px -4) (px 12) (rgba 15 23 42 0.06)
+            ]
+        ]
+        [ div [ css [ displayFlex, justifyContent spaceAround, width (pct 100), maxWidth (px 640) ] ]
+            (List.map (viewTabButton model.activeTab) tabs)
+        ]
+
+
+viewTabButton : Tab -> ( Tab, String, String ) -> Html FrontendMsg
+viewTabButton currentTab ( tab, icon, labelText ) =
+    let
+        isActive =
+            currentTab == tab
+    in
+    button
+        [ onClick (SelectTab tab)
+        , css
+            [ displayFlex
+            , flexDirection column
+            , alignItems center
+            , property "gap" "0.2rem"
+            , padding2 (rem 0.45) (rem 1)
+            , borderRadius (px 12)
+            , border zero
+            , cursor pointer
+            , fontWeight (int 700)
+            , fontSize (rem 0.8)
+            , backgroundColor
+                (if isActive then
+                    hex "EFF6FF"
+
+                 else
+                    rgba 0 0 0 0
+                )
+            , color
+                (if isActive then
+                    hex "2563EB"
+
+                 else
+                    hex "64748B"
+                )
+            ]
+        ]
+        [ span [ css [ fontSize (rem 1.3) ] ] [ text icon ]
+        , span [] [ text labelText ]
         ]
 
 
@@ -380,7 +611,6 @@ viewTasks pid model =
         [ h2 [] [ text "Tasks" ]
         , div []
             (Dict.values model.tasks
-
                 |> List.filter (\t -> t.active && (List.isEmpty t.assignedTo || List.member pid t.assignedTo))
                 |> List.map
                     (\t ->
@@ -420,7 +650,6 @@ viewTasks pid model =
                     )
             )
         ]
-
 
 
 viewRewards : ParticipantId -> FrontendModel -> Html FrontendMsg

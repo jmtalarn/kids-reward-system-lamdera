@@ -97,3 +97,21 @@ actionButton enabled bgHex =
                 hex "94A3B8"
             )
         ]
+
+field : List Style -> Attribute msg
+field extra =
+    css
+        ([ padding2 (rem 0.55) (rem 0.75)
+         , borderRadius (px 10)
+         , border3 (px 2) solid (hex "CBD5E1")
+         , backgroundColor (hex "FFFFFF")
+         , color (hex "0F172A")
+         , fontSize (rem 0.95)
+         , outline none
+         , focus
+            [ borderColor (hex "2563EB")
+            , boxShadow4 zero zero (px 0) (rgba 37 99 235 0.15)
+            ]
+         ]
+            ++ extra
+        )

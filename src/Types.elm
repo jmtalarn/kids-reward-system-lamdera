@@ -46,6 +46,10 @@ type alias FrontendModel =
     , bonusReason : String
     , newKidColor : String
     , newTaskAssignedTo : List ParticipantId
+    , activeTab : Tab
+    , celebration : Maybe Celebration
+    , celebrationCount : Int
+    , selectedDate : Time.Posix
     }
 
 
@@ -78,6 +82,10 @@ type FrontendMsg
     | ToggleTaskAssignee ParticipantId
     | ClickToggleTaskActive TaskId
     | ClickToggleRewardActive RewardId
+    | SelectTab Tab
+    | ClearCelebration Int
+    | SelectCalendarDate Time.Posix
+    | ClickCompleteTaskForDate ParticipantId TaskId Time.Posix
     | GotZone Time.Zone
     | Tick Time.Posix
 
@@ -92,7 +100,7 @@ type ToBackend
     | AddManualAdjustment { participantId : ParticipantId, amount : Int, reason : String }
     | ToggleTaskActive TaskId
     | ToggleRewardActive RewardId
-    | CompleteTask { participantId : ParticipantId, taskId : TaskId }
+    | CompleteTask { participantId : ParticipantId, taskId : TaskId, forDate : Time.Posix }
     | RedeemReward { participantId : ParticipantId, rewardId : RewardId }
 
 
@@ -110,3 +118,17 @@ type ToFrontend
         }
     | ParentPinVerified Bool
     | ActionFailed String
+
+type Tab
+    = TasksTab
+    | ShopTab
+    | ActivityTab
+    | AdminTab
+    | CalendarTab
+
+type alias Celebration =
+    { id : Int
+    , title : String
+    , subtitle : String
+    , isReward : Bool
+    }
