@@ -112,7 +112,24 @@ update msg model =
             ( { model | url = url }, Cmd.none )
 
         SelectParticipant maybeId ->
-            ( { model | selectedParticipant = maybeId }, Cmd.none )
+            let
+                maybeKid =
+                    maybeId |> Maybe.andThen (\pid -> Dict.get pid model.participants)
+            in
+            case ( model.isParentMode && model.activeTab == AdminTab, maybeKid ) of
+                ( True, Just kid ) ->
+                    ( { model
+                        | selectedParticipant = maybeId
+                        , editingKidId = Just kid.id
+                        , newKidName = kid.name
+                        , newKidAvatar = kid.avatar
+                        , newKidColor = kid.color
+                      }
+                    , Cmd.none
+                    )
+
+                _ ->
+                    ( { model | selectedParticipant = maybeId }, Cmd.none )
 
         ClickCompleteTask pid tid ->
             update (ClickCompleteTaskForDate pid tid model.now) model
@@ -233,14 +250,34 @@ update msg model =
                 ( { model | errorMessage = Just "Enter a name for the kid." }, Cmd.none )
 
             else
-                ( { model | newKidName = "" }
-                , Lamdera.sendToBackend
-                    (CreateParticipant
-                        { name = String.trim model.newKidName
-                        , avatar = model.newKidAvatar
-                        , color = model.newKidColor
-                        }
-                    )
+                let
+                    cmd =
+                        case model.editingKidId of
+                            Just kidId ->
+                                Lamdera.sendToBackend
+                                    (UpdateParticipant
+                                        { id = kidId
+                                        , name = String.trim model.newKidName
+                                        , avatar = model.newKidAvatar
+                                        , color = model.newKidColor
+                                        }
+                                    )
+
+                            Nothing ->
+                                Lamdera.sendToBackend
+                                    (CreateParticipant
+                                        { name = String.trim model.newKidName
+                                        , avatar = model.newKidAvatar
+                                        , color = model.newKidColor
+                                        }
+                                    )
+                in
+                ( { model
+                    | editingKidId = Nothing
+                    , newKidName = ""
+                    , newKidAvatar = "🦊"
+                  }
+                , cmd
                 )
 
         UpdateNewTaskTitle val ->
@@ -559,6 +596,15 @@ update msg model =
         UpdateNewTaskEndDate val ->
             ( { model | newTaskEndDate = val }, Cmd.none )
 
+        ClickToggleParticipantActive pid ->
+            ( { model
+                | editingKidId = Nothing
+                , newKidName = ""
+                , newKidAvatar = "🦊"
+              }
+            , Lamdera.sendToBackend (ToggleParticipantActive pid)
+            )
+
 
 updateFromBackend : ToFrontend -> FrontendModel -> ( FrontendModel, Cmd FrontendMsg )
 updateFromBackend msg model =
@@ -568,7 +614,7 @@ updateFromBackend msg model =
                 activeKid =
                     case model.selectedParticipant of
                         Just id ->
-                            if Dict.member id data.participants then
+                            if Dict.get id data.participants |> Maybe.map .active |> Maybe.withDefault False then
                                 Just id
 
                             else

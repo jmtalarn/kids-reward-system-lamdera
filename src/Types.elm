@@ -125,6 +125,7 @@ type FrontendMsg
     | ClickRejectTransaction TransactionId
     | UpdateNewTaskStartDate String 
     | UpdateNewTaskEndDate String
+    | ClickToggleParticipantActive ParticipantId
 
 
 type ToBackend
@@ -147,6 +148,7 @@ type ToBackend
     | ApproveTransaction TransactionId
     | RejectTransaction TransactionId
     | UpdateLanguage Language
+    | ToggleParticipantActive ParticipantId
 
 
 type BackendMsg

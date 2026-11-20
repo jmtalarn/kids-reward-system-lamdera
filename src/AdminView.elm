@@ -120,6 +120,7 @@ viewKidForm model =
     let
         isEditing =
             model.editingKidId /= Nothing
+        maybeEditingKid = model.editingKidId |> Maybe.andThen (\id -> Dict.get id model.participants)
     in
     div [ Styles.card [] ]
         [ sectionHeader
@@ -158,6 +159,23 @@ viewKidForm model =
 
               else
                 text ""
+            , case maybeEditingKid of
+                Just kid ->
+                    button 
+                    [ type_ "button"
+                    , onClick (ClickToggleParticipantActive (Maybe.withDefault "" model.editingKidId))
+                    , Styles.actionButton True 
+                        (if kid.active then
+                                "DC2626"
+
+                             else
+                                "16A34A"
+                            ) 
+                    ] 
+                    [ text (if (kid.active) then I18n.archiveButtonText model.lang else I18n.unarchiveButtonText model.lang) ]   
+
+                Nothing ->
+                    text ""
             ]
         ]
 
@@ -248,7 +266,7 @@ viewTaskForm model =
                             I18n.assignTo model.lang
                         )
                     ]
-                    :: (Dict.values model.participants |> List.map (viewAssigneeChip model.newTaskAssignedTo))
+                    :: (Dict.values model.participants |> List.filter .active |> List.map (viewAssigneeChip model.newTaskAssignedTo))
                 )
             , div [ css [ displayFlex, justifyContent spaceBetween, alignItems center, flexWrap wrap, property "gap" "0.5rem", paddingTop (rem 0.25) ] ]
                 [ button
@@ -443,17 +461,6 @@ viewManageItems : FrontendModel -> Html FrontendMsg
 viewManageItems model =
     div [ Styles.card [] ]
         [ sectionHeader "📦" (I18n.manageSectionTitle model.lang)
-        , div [ css [ displayFlex, flexDirection column, property "gap" "0.5rem", marginBottom (rem 1.25) ] ]
-            (Dict.values model.participants
-                |> List.map
-                    (\kid ->
-                        div [ css [ displayFlex, justifyContent spaceBetween, alignItems center, padding (rem 0.6), borderRadius (px 10), backgroundColor (hex "F8FAFC") ] ]
-                            [ span [ css [ fontWeight (int 600), color (hex (String.dropLeft 1 kid.color)) ] ]
-                                [ text (kid.avatar ++ " " ++ kid.name) ]
-                            , button [ type_ "button", onClick (StartEditKid kid), Styles.actionButton True "2563EB" ] [ text (I18n.editButton model.lang) ]
-                            ]
-                    )
-            )
         , div [ css [ displayFlex, flexDirection column, property "gap" "0.5rem", marginBottom (rem 1.25) ] ]
             (Dict.values model.tasks
                 |> List.map

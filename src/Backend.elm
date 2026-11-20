@@ -32,6 +32,7 @@ init =
             , color = "#F59E0B"
             , createdAt = epoch
             , goalRewardIds = []
+            , active = True
             }
 
         starterTask =
@@ -152,6 +153,7 @@ handleTimedAction clientId msg now model =
                     , color = data.color
                     , createdAt = now
                     , goalRewardIds = []
+                    , active = True
                     }
 
                 updatedModel =
@@ -450,6 +452,16 @@ handleTimedAction clientId msg now model =
                     { model | lang = newLang }
             in
             ( updatedModel, Lamdera.broadcast (snapshotFor updatedModel) )
+        ToggleParticipantActive pid ->
+            let
+                updated =
+                    Dict.update pid (Maybe.map (\p -> { p | active = not p.active })) model.participants
+
+                updatedModel =
+                    { model | participants = updated }
+            in
+            ( updatedModel, Lamdera.broadcast (snapshotFor updatedModel) )
+
 
 cooldownMessage : Recurrence -> String
 cooldownMessage recurrence =

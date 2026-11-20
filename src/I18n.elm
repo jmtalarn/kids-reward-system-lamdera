@@ -537,6 +537,18 @@ archiveButtonText lang =
         Ca ->
             "Arxivar"
 
+unarchiveButtonText : Language -> String
+unarchiveButtonText lang =
+    case lang of
+        En ->
+            "Unarchive"
+
+        Es ->
+            "Desarchivar"
+
+        Ca ->
+            "Desarxivar"
+
 
 restoreButtonText : Language -> String
 restoreButtonText lang =
@@ -672,13 +684,13 @@ manageSectionTitle : Language -> String
 manageSectionTitle lang =
     case lang of
         En ->
-            "Manage Kids, Tasks & Rewards"
+            "Manage Tasks & Rewards"
 
         Es ->
-            "Gestionar Niños, Tareas y Premios"
+            "Gestionar Tareas y Premios"
 
         Ca ->
-            "Gestionar Nens, Tasques i Premis"
+            "Gestionar Tasques i Premis"
 
 
 deleteButton : Language -> String

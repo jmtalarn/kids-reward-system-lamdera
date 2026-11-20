@@ -13,53 +13,82 @@ import Types exposing (..)
 
 viewParticipantBar : FrontendModel -> Html FrontendMsg
 viewParticipantBar model =
+    let
+        activeParticipants =
+            Dict.values model.participants
+                |> List.filter .active
+
+        inactiveParticipants =
+            Dict.values model.participants
+                |> List.filter (not << .active)
+    in
     div [ Styles.row 0.75, css [ marginBottom (rem 1.5) ] ]
-        (Dict.values model.participants
-            |> List.map
-                (\p ->
-                    let
-                        isSelected =
-                            model.selectedParticipant == Just p.id
+        ((activeParticipants
+            |> List.map (participantPill model)
+         )
+            ++ (if model.isParentMode then
+                    inactiveParticipants
+                        |> List.map (participantPill model)
 
-                        pts =
-                            balanceFor p.id model.transactions
-                    in
-                    button
-                        [ onClick (SelectParticipant (Just p.id))
-                        , Styles.row 0.75
-                        , css
-                            [ padding2 (rem 0.75) (rem 1.25)
-                            , borderRadius (px 16)
-                            , cursor pointer
-                            , fontSize (rem 1)
-                            , fontWeight (int 700)
-                            , border3 (px 3)
-                                solid
-                                (if isSelected then
-                                    hex (String.dropLeft 1 p.color)
-
-                                 else
-                                    hex "E2E8F0"
-                                )
-                            , backgroundColor
-                                (if isSelected then
-                                    hex "FFFFFF"
-
-                                 else
-                                    hex "F8FAFC"
-                                )
-                            ]
-                        ]
-                        [ span [ css [ fontSize (rem 1.75) ] ] [ text p.avatar ]
-                        , div [ css [ textAlign left ] ]
-                            [ div [] [ text p.name ]
-                            , div [ css [ fontSize (rem 0.85), color (hex (String.dropLeft 1 p.color)) ] ]
-                                [ text ("★ " ++ String.fromInt pts ++ " pts") ]
-                            ]
-                        ]
-                )
+                else
+                    []
+               )
         )
 
+
+participantPill : FrontendModel -> Participant -> Html FrontendMsg
+participantPill model p =
+    let
+        isSelected =
+            model.selectedParticipant == Just p.id
+
+        pts =
+            balanceFor p.id model.transactions
+    in
+    button
+        [ onClick (SelectParticipant (Just p.id))
+        , Styles.row 0.75
+        , css
+            ([ padding2 (rem 0.75) (rem 1.25)
+             , borderRadius (px 16)
+             , cursor pointer
+             , fontSize (rem 1)
+             , fontWeight (int 700)
+             , border3 (px 3)
+                solid
+                (if isSelected then
+                    hex (String.dropLeft 1 p.color)
+
+                 else
+                    hex "E2E8F0"
+                )
+             , backgroundColor
+                (if isSelected then
+                    hex "FFFFFF"
+
+                 else
+                    hex "F8FAFC"
+                )
+             ]
+                ++ (if not p.active then
+                        [ property "filter" "grayscale(100%)"
+                        , opacity (num 0.55)
+                        , backgroundColor (hex "F1F5F9")
+                        , border3 (px 2) dashed (hex "94A3B8")
+                        ]
+
+                    else
+                        []
+                   )
+            )
+        ]
+        [ span [ css [ fontSize (rem 1.75) ] ] [ text p.avatar ]
+        , div [ css [ textAlign left ] ]
+            [ div [] [ text p.name ]
+            , div [ css [ fontSize (rem 0.85), color (hex (String.dropLeft 1 p.color)) ] ]
+                [ text ("★ " ++ String.fromInt pts ++ " pts") ]
+            ]
+        ]
 
 
 viewHeroBanner : Language -> Participant -> Int -> Int -> Dict.Dict RewardId Reward -> Html FrontendMsg
