@@ -1,7 +1,6 @@
 module I18n exposing (..)
 
 
-import Domain exposing (Recurrence(..))
 import Types exposing (Language(..))
 import Time exposing (Weekday(..))
 
@@ -44,45 +43,6 @@ pointsLabel lang =
             "Punts"
 
 
-missionsTitle : Language -> String
-missionsTitle lang =
-    case lang of
-        En ->
-            "🎯 Missions & Chores"
-
-        Es ->
-            "🎯 Misiones y Tareas"
-
-        Ca ->
-            "🎯 Missions i Tasques"
-
-
-shopTitle : Language -> String
-shopTitle lang =
-    case lang of
-        En ->
-            "🎁 Reward Shop"
-
-        Es ->
-            "🎁 Tienda de Premios"
-
-        Ca ->
-            "🎁 Botiga de Premis"
-
-
-activityTitle : Language -> String
-activityTitle lang =
-    case lang of
-        En ->
-            "📜 Recent Activity"
-
-        Es ->
-            "📜 Actividad Reciente"
-
-        Ca ->
-            "📜 Activitat Recent"
-
-
 tabLabels : Language -> { missions : String, calendar : String, shop : String, activity : String, parent : String }
 tabLabels lang =
     case lang of
@@ -94,80 +54,6 @@ tabLabels lang =
 
         Ca ->
             { missions = "Missions", calendar = "Calendari", shop = "Botiga", activity = "Activitat", parent = "Pares" }
-
-
-recurrenceText : Language -> Recurrence -> String
-recurrenceText lang rec =
-    case ( lang, rec ) of
-        ( En, OneTime ) ->
-            "One-Time"
-
-        ( En, Daily ) ->
-            "Daily"
-
-        ( En, Weekly ) ->
-            "Weekly"
-
-        ( En, Monthly ) ->
-            "Monthly"
-
-        ( Es, OneTime ) ->
-            "Una vez"
-
-        ( Es, Daily ) ->
-            "Diaria"
-
-        ( Es, Weekly ) ->
-            "Semanal"
-
-        ( Es, Monthly ) ->
-            "Mensual"
-
-        ( Ca, OneTime ) ->
-            "Un cop"
-
-        ( Ca, Daily ) ->
-            "Diària"
-
-        ( Ca, Weekly ) ->
-            "Setmanal"
-
-        ( Ca, Monthly ) ->
-            "Mensual"
-        
-        ( _, SpecificDays days ) ->
-            let
-                weekdaysOnly =
-                    [ Time.Mon, Time.Tue, Time.Wed, Time.Thu, Time.Fri ]
-            in
-            if List.length days == 5 && List.all (\d -> List.member d days) weekdaysOnly then
-                case lang of
-                    En ->
-                        "Mon–Fri"
-
-                    Es ->
-                        "Lun–Vie"
-
-                    Ca ->
-                        "Dl–Dv"
-
-            else
-                days
-                    |> List.map (shortDayName lang)
-                    |> String.join " · "
-
-
-doneLabel : Language -> String
-doneLabel lang =
-    case lang of
-        En ->
-            "✅ Done"
-
-        Es ->
-            "✅ Hecho"
-
-        Ca ->
-            "✅ Fet"
 
 
 redeemNow : Language -> String
@@ -220,32 +106,6 @@ morePtsNeeded lang pts pct =
 
         Ca ->
             "Falten " ++ String.fromInt pts ++ " pts (" ++ String.fromInt pct ++ "%)"
-
-
-todayLabel : Language -> String
-todayLabel lang =
-    case lang of
-        En ->
-            "Today"
-
-        Es ->
-            "Hoy"
-
-        Ca ->
-            "Avui"
-
-
-weekdays : Language -> List String
-weekdays lang =
-    case lang of
-        En ->
-            [ "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" ]
-
-        Es ->
-            [ "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom" ]
-
-        Ca ->
-            [ "Dl", "Dt", "Dc", "Dj", "Dv", "Ds", "Dg" ]
 
 
 prevWeek : Language -> String
@@ -339,19 +199,6 @@ noActivityYet lang =
             "Sense activitat encara."
 
 
-parentAdminPanel : Language -> String
-parentAdminPanel lang =
-    case lang of
-        En ->
-            "🛠️ Parent Admin Panel"
-
-        Es ->
-            "🛠️ Panel de Control de Padres"
-
-        Ca ->
-            "🛠️ Panell de Control de Pares"
-
-
 assignToEveryone : Language -> String
 assignToEveryone lang =
     case lang of
@@ -378,32 +225,6 @@ assignTo lang =
             "Assignar a:"
 
 
-addRewardButton : Language -> String
-addRewardButton lang =
-    case lang of
-        En ->
-            "Add Reward"
-
-        Es ->
-            "Añadir Premio"
-
-        Ca ->
-            "Afegir Premi"
-
-
-manualBonusPenalty : Language -> String
-manualBonusPenalty lang =
-    case lang of
-        En ->
-            "Manual Bonus / Penalty"
-
-        Es ->
-            "Bonificación / Penalización Manual"
-
-        Ca ->
-            "Bonificació / Penalitat Manual"
-
-
 applyButton : Language -> String
 applyButton lang =
     case lang of
@@ -415,19 +236,6 @@ applyButton lang =
 
         Ca ->
             "Aplicar"
-
-
-manageTasks : Language -> String
-manageTasks lang =
-    case lang of
-        En ->
-            "Manage Tasks"
-
-        Es ->
-            "Gestionar Tareas"
-
-        Ca ->
-            "Gestionar Tasques"
 
 
 dailyLabel : Language -> String
@@ -469,19 +277,6 @@ monthlyLabel lang =
             "Mensual"
 
 
-oneTimeLabel : Language -> String
-oneTimeLabel lang =
-    case lang of
-        En ->
-            "OneTime"
-
-        Es ->
-            "Una vez"
-
-        Ca ->
-            "Un cop"
-
-
 missionsAndChores : Language -> String
 missionsAndChores lang =
     case lang of
@@ -493,19 +288,6 @@ missionsAndChores lang =
 
         Ca ->
             "🎯 Missions i Tasques"
-
-
-noKidsYet : Language -> String
-noKidsYet lang =
-    case lang of
-        En ->
-            "No kids yet. Unlock Parent Mode to add one!"
-
-        Es ->
-            "Sin niños aún. ¡Desbloquea Modo Padres para agregar uno!"
-
-        Ca ->
-            "Sense nens encara. Desbloqueja el Mode Pares per afegir un!"
 
 
 selectOrAddKid : Language -> String
@@ -532,45 +314,6 @@ unlockParentMode lang =
 
         Ca ->
             "🔒 Desbloqueja el Mode Pares a la part superior per gestionar nens, tasques i premis."
-
-
-lockParentButton : Language -> String
-lockParentButton lang =
-    case lang of
-        En ->
-            "🔒 Lock Parent"
-
-        Es ->
-            "🔒 Bloquear Padres"
-
-        Ca ->
-            "🔒 Bloquejar Pares"
-
-
-parentModeButton : Language -> String
-parentModeButton lang =
-    case lang of
-        En ->
-            "🔐 Parent Mode"
-
-        Es ->
-            "🔐 Modo Padres"
-
-        Ca ->
-            "🔐 Mode Pares"
-
-
-pinPlaceholder : Language -> String
-pinPlaceholder lang =
-    case lang of
-        En ->
-            "PIN"
-
-        Es ->
-            "PIN"
-
-        Ca ->
-            "PIN"
 
 
 tasksSection : Language -> String
@@ -911,32 +654,6 @@ costPlaceholder lang =
             "Cost"
 
 
-avatarPlaceholder : Language -> String
-avatarPlaceholder lang =
-    case lang of
-        En ->
-            "Avatar"
-
-        Es ->
-            "Avatar"
-
-        Ca ->
-            "Avatar"
-
-
-emojiPlaceholder : Language -> String
-emojiPlaceholder lang =
-    case lang of
-        En ->
-            "Emoji"
-
-        Es ->
-            "Emoji"
-
-        Ca ->
-            "Emoji"
-
-
 quickAdjustmentTitle : Language -> String -> String -> String
 quickAdjustmentTitle lang avatar name =
     case lang of
@@ -974,19 +691,6 @@ deleteButton lang =
 
         Ca ->
             "🗑️"
-
-
-closeBtnSymbol : Language -> String
-closeBtnSymbol lang =
-    case lang of
-        En ->
-            "×"
-
-        Es ->
-            "×"
-
-        Ca ->
-            "×"
 
 
 kidNamePlaceholder : Language -> String
@@ -1097,3 +801,92 @@ chooseEmoji lang =
 
         Ca ->
             "Tria un Emoji"
+
+streakLabel : Language -> Int -> String
+streakLabel lang days =
+    case lang of
+        En ->
+            if days == 1 then
+                "🔥 1-day streak"
+
+            else
+                "🔥 " ++ String.fromInt days ++ "-day streak"
+
+        Es ->
+            if days == 1 then
+                "🔥 Racha de 1 día"
+
+            else
+                "🔥 Racha de " ++ String.fromInt days ++ " días"
+
+        Ca ->
+            if days == 1 then
+                "🔥 Ratxa d'1 dia"
+
+            else
+                "🔥 Ratxa de " ++ String.fromInt days ++ " dies"
+
+
+startDateLabel : Language -> String
+startDateLabel lang =
+    case lang of
+        En ->
+            "Start:"
+
+        Es ->
+            "Inicio:"
+
+        Ca ->
+            "Inici:"
+
+
+endDateLabel : Language -> String
+endDateLabel lang =
+    case lang of
+        En ->
+            "End:"
+
+        Es ->
+            "Fin:"
+
+        Ca ->
+            "Fi:"
+
+
+noKidsMessage : Language -> String
+noKidsMessage lang =
+    case lang of
+        En ->
+            "No kids yet. Unlock Parent Mode to add one!"
+
+        Es ->
+            "Sin niños aún. ¡Desbloquea Modo Padres para agregar uno!"
+
+        Ca ->
+            "Sense nens encara. Desbloqueja el Mode Pares per afegir un!"
+
+
+lockButtonLabel : Language -> String
+lockButtonLabel lang =
+    case lang of
+        En ->
+            "🔒 Lock"
+
+        Es ->
+            "🔒 Bloquear"
+
+        Ca ->
+            "🔒 Bloquejar"
+
+
+parentButtonLabel : Language -> String
+parentButtonLabel lang =
+    case lang of
+        En ->
+            "🔐 Parent"
+
+        Es ->
+            "🔐 Padres"
+
+        Ca ->
+            "🔐 Pares"

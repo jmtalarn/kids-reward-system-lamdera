@@ -17,6 +17,7 @@ type alias BackendModel =
     , tasks : Dict TaskId Task
     , rewards : Dict RewardId Reward
     , transactions : Dict TransactionId PointTransaction
+    , lang : Language
     }
 
 
@@ -60,6 +61,8 @@ type alias FrontendModel =
     , pinLength : Int
     , emojiPicker : Maybe EmojiTarget
     , newTaskRequiresApproval : Bool
+    , newTaskStartDate : String
+    , newTaskEndDate : String
     }
 
 
@@ -120,6 +123,8 @@ type FrontendMsg
     | ToggleNewTaskRequiresApproval
     | ClickApproveTransaction TransactionId
     | ClickRejectTransaction TransactionId
+    | UpdateNewTaskStartDate String 
+    | UpdateNewTaskEndDate String
 
 
 type ToBackend
@@ -127,7 +132,7 @@ type ToBackend
     | VerifyParentPin String
     | LogoutParent
     | CreateParticipant { name : String, avatar : String, color : String }
-    | CreateTask { title : String, description : String, points : Int, recurrence : Recurrence, assignedTo : List ParticipantId, requiresApproval : Bool }
+    | CreateTask { title : String, description : String, points : Int, recurrence : Recurrence, assignedTo : List ParticipantId, requiresApproval : Bool, startDate : Maybe Time.Posix, endDate : Maybe Time.Posix }
     | CreateReward { title : String, description : String, cost : Int, emoji : String }
     | AddManualAdjustment { participantId : ParticipantId, amount : Int, reason : String }
     | ToggleTaskActive TaskId
@@ -136,11 +141,12 @@ type ToBackend
     | RedeemReward { participantId : ParticipantId, rewardId : RewardId }
     | DeleteTransaction TransactionId
     | UpdateParticipant { id : ParticipantId, name : String, avatar : String, color : String }
-    | UpdateTask { id : TaskId, title : String, description : String, points : Int, recurrence : Recurrence, assignedTo : List ParticipantId, requiresApproval : Bool }
+    | UpdateTask { id : TaskId, title : String, description : String, points : Int, recurrence : Recurrence, assignedTo : List ParticipantId, requiresApproval : Bool, startDate : Maybe Time.Posix, endDate : Maybe Time.Posix }
     | UpdateReward { id : RewardId, title : String, description : String, cost : Int, emoji : String }
     | ToggleParticipantGoal { participantId : ParticipantId, rewardId : RewardId }
     | ApproveTransaction TransactionId
     | RejectTransaction TransactionId
+    | UpdateLanguage Language
 
 
 type BackendMsg
@@ -154,6 +160,7 @@ type ToFrontend
         , rewards : Dict RewardId Reward
         , transactions : Dict TransactionId PointTransaction
         , pinLength : Int
+        , lang : Language
         }
     | ParentPinVerified Bool
     | ActionFailed String

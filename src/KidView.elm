@@ -62,21 +62,8 @@ viewParticipantBar model =
 
 
 
--- viewKidDashboard : Participant -> FrontendModel -> Html FrontendMsg
--- viewKidDashboard kid model =
---     let
---         pts =
---             balanceFor kid.id model.transactions
---     in
---     div []
---         [ viewHeroBanner kid pts
---         , viewTaskGrid kid model
---         , viewRewardShop kid pts model
---         ]
-
-
-viewHeroBanner : Language -> Participant -> Int -> Dict.Dict RewardId Reward -> Html FrontendMsg
-viewHeroBanner lang kid points rewards =
+viewHeroBanner : Language -> Participant -> Int -> Int -> Dict.Dict RewardId Reward -> Html FrontendMsg
+viewHeroBanner lang kid points streak rewards =
     let
         wishlist =
             kid.goalRewardIds
@@ -98,6 +85,22 @@ viewHeroBanner lang kid points rewards =
                 , div []
                     [ div [ css [ fontSize (rem 0.9), opacity (num 0.9) ] ] [ text (I18n.welcomeBack lang) ]
                     , h2 [ css [ margin zero, fontSize (rem 1.75) ] ] [ text kid.name ]
+                    , if streak > 0 then
+                        div
+                            [ css
+                                [ display inlineBlock
+                                , marginTop (rem 0.35)
+                                , backgroundColor (rgba 255 255 255 0.22)
+                                , padding2 (rem 0.2) (rem 0.65)
+                                , borderRadius (px 999)
+                                , fontSize (rem 0.8)
+                                , fontWeight (int 700)
+                                ]
+                            ]
+                            [ text (I18n.streakLabel lang streak) ]
+
+                      else
+                        text ""
                     ]
                 ]
             , div [ css [ backgroundColor (rgba 255 255 255 0.2), padding2 (rem 0.75) (rem 1.25), borderRadius (px 14), textAlign center ] ]
@@ -139,7 +142,11 @@ viewTaskGrid lang kid model =
     let
         kidTasks =
             Dict.values model.tasks
-                |> List.filter (\t -> t.active && (List.isEmpty t.assignedTo || List.member kid.id t.assignedTo))
+                |> List.filter
+                    (\t ->
+                        isTaskActiveOnDate model.zone model.now t
+                            && (List.isEmpty t.assignedTo || List.member kid.id t.assignedTo)
+                    )
     in
     div []
         [ h3 [] [ text <| I18n.missionsAndChores lang ]

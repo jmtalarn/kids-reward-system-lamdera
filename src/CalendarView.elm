@@ -24,9 +24,12 @@ viewCalendarTab kid model =
             daysOfWeek model.zone model.selectedDate
 
         kidTasks =
-            Dict.values model.tasks
-
-                |> List.filter (\t -> t.active && (List.isEmpty t.assignedTo || List.member kid.id t.assignedTo))
+         Dict.values model.tasks
+             |> List.filter
+                 (\t ->
+                     isTaskActiveOnDate model.zone model.selectedDate t
+                         && (List.isEmpty t.assignedTo || List.member kid.id t.assignedTo)
+                 )
     in
     div []
         [ viewWeekNav kid model

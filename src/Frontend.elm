@@ -3,17 +3,20 @@ module Frontend exposing (..)
 import AdminView exposing (viewAdminPanel)
 import Browser
 import Browser.Dom as Dom
+import Browser.Events
 import Browser.Navigation as Nav
 import CalendarView exposing (viewCalendarTab)
 import CelebrationView exposing (viewCelebration)
 import Css exposing (..)
 import Dict
 import Domain exposing (..)
+import EmojiPickerModal exposing (viewEmojiPickerModal)
 import Env
 import Html.Styled exposing (..)
 import Html.Styled.Attributes exposing (css, style)
 import Html.Styled.Events exposing (onClick)
 import I18n
+import Json.Decode as Decode
 import KidView exposing (viewHeroBanner, viewLedger, viewParticipantBar, viewRewardShop, viewTaskGrid)
 import Lamdera
 import PinPadModal exposing (viewPinPadModal)
@@ -23,9 +26,7 @@ import Task
 import Time
 import Types exposing (..)
 import Url
-import Browser.Events
-import Json.Decode as Decode
-import EmojiPickerModal exposing (viewEmojiPickerModal)
+
 
 app =
     Lamdera.frontend
@@ -78,6 +79,8 @@ init url key =
       , pinLength = String.length Env.parentPin
       , emojiPicker = Nothing
       , newTaskRequiresApproval = False
+      , newTaskStartDate = ""
+      , newTaskEndDate = ""
       }
     , Cmd.batch
         [ Lamdera.sendToBackend RequestInitialState
@@ -85,6 +88,8 @@ init url key =
         , Task.perform Tick Time.now
         ]
     )
+
+
 subscriptions : FrontendModel -> Sub FrontendMsg
 subscriptions model =
     Sub.batch
@@ -95,7 +100,6 @@ subscriptions model =
           else
             Sub.none
         ]
-
 
 
 update : FrontendMsg -> FrontendModel -> ( FrontendModel, Cmd FrontendMsg )
@@ -148,23 +152,22 @@ update msg model =
                         Nothing
                 , celebration = cel
                 , celebrationCount = nextCount
-            }
-         , Cmd.batch
-             [ Lamdera.sendToBackend
-                 (CompleteTask
-                     { participantId = pid
-                     , taskId = tid
-                     , forDate = targetDate
-                     }
-                 )
-             , if needsApproval then
-                 Cmd.none
+              }
+            , Cmd.batch
+                [ Lamdera.sendToBackend
+                    (CompleteTask
+                        { participantId = pid
+                        , taskId = tid
+                        , forDate = targetDate
+                        }
+                    )
+                , if needsApproval then
+                    Cmd.none
 
-               else
-                 Process.sleep 3500 |> Task.perform (\_ -> ClearCelebration nextCount)
-             ]
-         )
-
+                  else
+                    Process.sleep 3500 |> Task.perform (\_ -> ClearCelebration nextCount)
+                ]
+            )
 
         ClickRedeemReward pid rid ->
             let
@@ -280,6 +283,12 @@ update msg model =
 
                     else
                         let
+                            parsedStart =
+                                parseDateInput model.newTaskStartDate
+
+                            parsedEnd =
+                                parseDateInput model.newTaskEndDate
+
                             cmd =
                                 case model.editingTaskId of
                                     Just tid ->
@@ -292,6 +301,8 @@ update msg model =
                                                 , recurrence = finalRecurrence
                                                 , assignedTo = model.newTaskAssignedTo
                                                 , requiresApproval = model.newTaskRequiresApproval
+                                                , startDate = parsedStart
+                                                , endDate = parsedEnd
                                                 }
                                             )
 
@@ -304,6 +315,8 @@ update msg model =
                                                 , recurrence = finalRecurrence
                                                 , assignedTo = model.newTaskAssignedTo
                                                 , requiresApproval = model.newTaskRequiresApproval
+                                                , startDate = parsedStart
+                                                , endDate = parsedEnd
                                                 }
                                             )
                         in
@@ -314,6 +327,8 @@ update msg model =
                             , newTaskDays = []
                             , newTaskAssignedTo = []
                             , newTaskRequiresApproval = False
+                            , newTaskStartDate = ""
+                            , newTaskEndDate = ""
                           }
                         , cmd
                         )
@@ -435,7 +450,7 @@ update msg model =
             )
 
         SetLanguage newLang ->
-            ( { model | lang = newLang }, Cmd.none )
+            ( { model | lang = newLang }, Lamdera.sendToBackend (UpdateLanguage newLang) )
 
         StartEditKid kid ->
             ( { model | editingKidId = Just kid.id, newKidName = kid.name, newKidAvatar = kid.avatar, newKidColor = kid.color }
@@ -463,12 +478,14 @@ update msg model =
                 , newTaskDays = days
                 , newTaskAssignedTo = task.assignedTo
                 , newTaskRequiresApproval = task.requiresApproval
+                , newTaskStartDate = Maybe.map (formatDateInput model.zone) task.startDate |> Maybe.withDefault ""
+                , newTaskEndDate = Maybe.map (formatDateInput model.zone) task.endDate |> Maybe.withDefault ""
               }
             , Task.attempt (\_ -> NoOp) (Dom.focus "edit-task-input")
             )
 
         CancelEditTask ->
-            ( { model | editingTaskId = Nothing, newTaskTitle = "", newTaskPoints = "10", newTaskDays = [], newTaskAssignedTo = [], newTaskRequiresApproval = False }, Cmd.none )
+            ( { model | editingTaskId = Nothing, newTaskTitle = "", newTaskPoints = "10", newTaskDays = [], newTaskAssignedTo = [], newTaskRequiresApproval = False, newTaskStartDate = "", newTaskEndDate = "" }, Cmd.none )
 
         StartEditReward reward ->
             ( { model | editingRewardId = Just reward.id, newRewardTitle = reward.title, newRewardCost = String.fromInt reward.cost, newRewardEmoji = reward.emoji }
@@ -500,17 +517,18 @@ update msg model =
         BackspacePin ->
             ( { model | errorMessage = Nothing, pinInput = String.dropRight 1 model.pinInput }
             , Cmd.none
-            )       
-        
+            )
+
         ClickToggleGoal pid rid ->
             ( model
             , Lamdera.sendToBackend (ToggleParticipantGoal { participantId = pid, rewardId = rid })
             )
+
         NoOp ->
             ( model, Cmd.none )
 
         OpenEmojiPicker target ->
-         ( { model | emojiPicker = Just target }, Cmd.none )
+            ( { model | emojiPicker = Just target }, Cmd.none )
 
         CloseEmojiPicker ->
             ( { model | emojiPicker = Nothing }, Cmd.none )
@@ -525,6 +543,7 @@ update msg model =
 
                 Nothing ->
                     ( model, Cmd.none )
+
         ToggleNewTaskRequiresApproval ->
             ( { model | newTaskRequiresApproval = not model.newTaskRequiresApproval }, Cmd.none )
 
@@ -533,6 +552,12 @@ update msg model =
 
         ClickRejectTransaction txId ->
             ( model, Lamdera.sendToBackend (RejectTransaction txId) )
+
+        UpdateNewTaskStartDate val ->
+            ( { model | newTaskStartDate = val }, Cmd.none )
+
+        UpdateNewTaskEndDate val ->
+            ( { model | newTaskEndDate = val }, Cmd.none )
 
 
 updateFromBackend : ToFrontend -> FrontendModel -> ( FrontendModel, Cmd FrontendMsg )
@@ -558,6 +583,7 @@ updateFromBackend msg model =
                 , rewards = data.rewards
                 , transactions = data.transactions
                 , selectedParticipant = activeKid
+                , lang = data.lang
               }
             , Cmd.none
             )
@@ -604,7 +630,6 @@ viewPage model =
         ]
 
 
-
 viewActiveTab : FrontendModel -> Html FrontendMsg
 viewActiveTab model =
     let
@@ -616,13 +641,21 @@ viewActiveTab model =
         TasksTab ->
             case maybeKid of
                 Just kid ->
+                    let
+                        pts =
+                            balanceFor kid.id model.transactions
+
+                        streak =
+                            dailyStreakFor model.zone model.now kid.id model.tasks model.transactions
+                    in
                     div []
-                        [ viewHeroBanner model.lang kid (balanceFor kid.id model.transactions) model.rewards
+                        [ viewHeroBanner model.lang kid pts streak model.rewards
                         , viewTaskGrid model.lang kid model
                         ]
 
                 Nothing ->
-                    p [] [ text "No kids yet. Unlock Parent Mode to add one!" ]
+                    p [] [ text (I18n.noKidsMessage model.lang) ]
+
         CalendarTab ->
             case maybeKid of
                 Just kid ->
@@ -637,14 +670,18 @@ viewActiveTab model =
                     let
                         pts =
                             balanceFor kid.id model.transactions
+
+                        streak =
+                            dailyStreakFor model.zone model.now kid.id model.tasks model.transactions
                     in
                     div []
-                        [ viewHeroBanner model.lang kid pts model.rewards
+                        [ viewHeroBanner model.lang kid pts streak model.rewards
                         , viewRewardShop kid pts model
                         ]
 
                 Nothing ->
                     p [] [ text "Select or add a kid first." ]
+
         ActivityTab ->
             viewLedger model
 
@@ -660,14 +697,27 @@ viewActiveTab model =
 viewBottomTabs : FrontendModel -> Html FrontendMsg
 viewBottomTabs model =
     let
+        labels =
+            I18n.tabLabels model.lang
+
+        pendingCount =
+            pendingApprovalCount model
+
+        parentLabel =
+            if pendingCount > 0 then
+                labels.parent ++ " (" ++ String.fromInt pendingCount ++ ")"
+
+            else
+                labels.parent
+
         tabs =
-            [ ( TasksTab, "🎯", "Missions" )
-            , ( CalendarTab, "📅", "Calendar" )
-            , ( ShopTab, "🎁", "Shop" )
-            , ( ActivityTab, "📜", "Activity" )
+            [ ( TasksTab, "🎯", labels.missions )
+            , ( CalendarTab, "📅", labels.calendar )
+            , ( ShopTab, "🎁", labels.shop )
+            , ( ActivityTab, "📜", labels.activity )
             ]
                 ++ (if model.isParentMode then
-                        [ ( AdminTab, "🛠️", "Parent" ) ]
+                        [ ( AdminTab, "🛠️", parentLabel ) ]
 
                     else
                         []
@@ -680,16 +730,14 @@ viewBottomTabs model =
             , left zero
             , right zero
             , backgroundColor (hex "FFFFFF")
-            , borderTop3 (px 2) solid (hex "E2E8F0")
+            , borderTop3 (px 1) solid (hex "E2E8F0")
             , displayFlex
-            , justifyContent center
-            , padding2 (rem 0.5) (rem 0.75)
-            , boxShadow4 zero (px -4) (px 12) (rgba 15 23 42 0.06)
+            , justifyContent spaceAround
+            , padding2 (rem 0.5) zero
+            , zIndex (int 900)
             ]
         ]
-        [ div [ css [ displayFlex, justifyContent spaceAround, width (pct 100), maxWidth (px 640) ] ]
-            (List.map (viewTabButton model.activeTab) tabs)
-        ]
+        (List.map (viewTabButton model.activeTab) tabs)
 
 
 viewTabButton : Tab -> ( Tab, String, String ) -> Html FrontendMsg
@@ -734,13 +782,48 @@ viewTabButton currentTab ( tab, icon, labelText ) =
 
 viewHeader : FrontendModel -> Html FrontendMsg
 viewHeader model =
-    div [ css [ displayFlex, justifyContent spaceBetween, alignItems center, marginBottom (rem 1.25) ] ]
-        [ h1 [ css [ margin zero, fontSize (rem 1.6) ] ] [ text (I18n.appTitle model.lang) ]
-        , if model.isParentMode then
-            button [ onClick LockParentMode, Styles.actionButton True "475569" ] [ text <| I18n.lockParentButton model.lang ]
+    let
+        pendingCount =
+            pendingApprovalCount model
 
-          else
-            button [ onClick OpenPinPad, Styles.actionButton True "2563EB" ] [ text <| I18n.parentModeButton model.lang ]
+        pendingBadge =
+            if pendingCount > 0 then
+                span
+                    [ css
+                        [ position absolute
+                        , top (px -8)
+                        , right (px -8)
+                        , minWidth (px 22)
+                        , height (px 22)
+
+                        --, padding2 zero (px 6)
+                        , borderRadius (pct 50)
+                        , backgroundColor (hex "EF4444")
+                        , color (hex "FFFFFF")
+                        , border3 (px 1) solid (hex "FFFFFF")
+                        , displayFlex
+                        , alignItems center
+                        , justifyContent center
+                        , fontSize (rem 0.72)
+                        , fontWeight (int 800)
+                        , boxShadow4 zero (px 2) (px 6) (rgba 15 23 42 0.25)
+                        ]
+                    ]
+                    [ text (String.fromInt pendingCount) ]
+
+            else
+                text ""
+    in
+    div [ css [ displayFlex, justifyContent spaceBetween, alignItems center, marginBottom (rem 1.25) ] ]
+        [ h1 [ css [ margin zero, fontSize (rem 1.5) ] ] [ text (I18n.appTitle model.lang) ]
+        , div [ css [ position relative, display inlineBlock ] ]
+            [ if model.isParentMode then
+                button [ onClick LockParentMode, Styles.actionButton True "475569" ] [ text (I18n.lockButtonLabel model.lang) ]
+
+              else
+                button [ onClick OpenPinPad, Styles.actionButton True "2563EB" ] [ text (I18n.parentButtonLabel model.lang) ]
+            , pendingBadge
+            ]
         ]
 
 
@@ -780,7 +863,6 @@ viewError model =
 
             Nothing ->
                 text ""
-
 
 
 viewParticipantSwitcher : FrontendModel -> Html FrontendMsg
@@ -920,6 +1002,8 @@ viewLangSwitcher current =
             )
             [ ( Ca, "CA" ), ( Es, "ES" ), ( En, "EN" ) ]
         )
+
+
 pinKeyDecoder : Decode.Decoder FrontendMsg
 pinKeyDecoder =
     Decode.field "key" Decode.string
@@ -968,3 +1052,108 @@ pinKeyDecoder =
                     _ ->
                         Decode.fail "Ignored key"
             )
+
+
+pendingApprovalCount : FrontendModel -> Int
+pendingApprovalCount model =
+    model.transactions
+        |> Dict.values
+        |> List.filter (\tx -> tx.amount > 0 && tx.approvedBy == Nothing)
+        |> List.length
+
+
+parseDateInput : String -> Maybe Time.Posix
+parseDateInput str =
+    case String.split "-" (String.trim str) of
+        [ yStr, mStr, dStr ] ->
+            case ( String.toInt yStr, String.toInt mStr, String.toInt dStr ) of
+                ( Just y, Just m, Just d ) ->
+                    let
+                        -- Civil days since 1970-01-01 (Howard Hinnant algorithm)
+                        yAdj =
+                            if m <= 2 then
+                                y - 1
+
+                            else
+                                y
+
+                        era =
+                            yAdj // 400
+
+                        yoe =
+                            yAdj - era * 400
+
+                        mAdj =
+                            if m > 2 then
+                                m - 3
+
+                            else
+                                m + 9
+
+                        doy =
+                            (153 * mAdj + 2) // 5 + d - 1
+
+                        doe =
+                            yoe * 365 + yoe // 4 - yoe // 100 + doy
+
+                        daysSinceEpoch =
+                            era * 146097 + doe - 719468
+                    in
+                    -- Noon UTC avoids any timezone boundary shift
+                    Just (Time.millisToPosix (daysSinceEpoch * 86400000 + 43200000))
+
+                _ ->
+                    Nothing
+
+        _ ->
+            Nothing
+
+
+formatDateInput : Time.Zone -> Time.Posix -> String
+formatDateInput zone t =
+    let
+        y =
+            String.fromInt (Time.toYear zone t)
+
+        m =
+            case Time.toMonth zone t of
+                Time.Jan ->
+                    "01"
+
+                Time.Feb ->
+                    "02"
+
+                Time.Mar ->
+                    "03"
+
+                Time.Apr ->
+                    "04"
+
+                Time.May ->
+                    "05"
+
+                Time.Jun ->
+                    "06"
+
+                Time.Jul ->
+                    "07"
+
+                Time.Aug ->
+                    "08"
+
+                Time.Sep ->
+                    "09"
+
+                Time.Oct ->
+                    "10"
+
+                Time.Nov ->
+                    "11"
+
+                Time.Dec ->
+                    "12"
+
+        d =
+            String.padLeft 2 '0' (String.fromInt (Time.toDay zone t))
+    in
+    y ++ "-" ++ m ++ "-" ++ d

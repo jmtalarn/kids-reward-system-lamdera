@@ -44,6 +44,8 @@ init =
             , active = True
             , createdAt = epoch
             , requiresApproval = False
+            , startDate = Nothing
+            , endDate = Nothing
             }
 
         starterOneTimeTask =
@@ -56,6 +58,8 @@ init =
             , active = True
             , createdAt = epoch
             , requiresApproval = False
+            , startDate = Nothing
+            , endDate = Nothing
             }
 
         starterReward =
@@ -78,6 +82,7 @@ init =
                 ]
       , rewards = Dict.singleton "4" starterReward
       , transactions = Dict.empty
+      , lang = En
       }
     , Cmd.none
     )
@@ -169,6 +174,8 @@ handleTimedAction clientId msg now model =
                     , active = True
                     , createdAt = now
                     , requiresApproval = data.requiresApproval
+                    , startDate = data.startDate
+                    , endDate = data.endDate
                     }
 
                 updatedModel =
@@ -280,6 +287,9 @@ handleTimedAction clientId msg now model =
 
                     else if isFuture then
                         ( model, Lamdera.sendToFrontend clientId (ActionFailed "Cannot complete tasks for future dates!") )
+                    
+                    else if not (isTaskActiveOnDate serverZone forDate task) then
+                     ( model, Lamdera.sendToFrontend clientId (ActionFailed "This task is not scheduled for that date.") )
 
                     else if not (canClaimTask serverZone forDate participantId task model.transactions) then
                         ( model, Lamdera.sendToFrontend clientId (ActionFailed (cooldownMessage task.recurrence)) )
@@ -367,6 +377,8 @@ handleTimedAction clientId msg now model =
                                     , recurrence = data.recurrence
                                     , assignedTo = data.assignedTo
                                     , requiresApproval = data.requiresApproval
+                                    , startDate = data.startDate
+                                    , endDate = data.endDate
                                 }
                             )
                         )
@@ -415,7 +427,7 @@ handleTimedAction clientId msg now model =
                     { model | rewards = updated }
             in
             ( updatedModel, Lamdera.broadcast (snapshotFor updatedModel) )
-            
+
         ApproveTransaction txId ->
             let
                 updated =
@@ -430,6 +442,12 @@ handleTimedAction clientId msg now model =
             let
                 updatedModel =
                     { model | transactions = Dict.remove txId model.transactions }
+            in
+            ( updatedModel, Lamdera.broadcast (snapshotFor updatedModel) )
+        UpdateLanguage newLang ->
+            let
+                updatedModel =
+                    { model | lang = newLang }
             in
             ( updatedModel, Lamdera.broadcast (snapshotFor updatedModel) )
 
@@ -460,6 +478,7 @@ snapshotFor model =
         , rewards = model.rewards
         , transactions = model.transactions
         , pinLength = String.length Env.parentPin
+        , lang = model.lang
         }
 
 

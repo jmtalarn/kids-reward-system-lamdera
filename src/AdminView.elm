@@ -193,7 +193,9 @@ viewTaskForm model =
 
                 _ ->
                     False
-        isEditing = model.editingTaskId /= Nothing
+
+        isEditing =
+            model.editingTaskId /= Nothing
     in
     div [ Styles.card [] ]
         [ sectionHeader
@@ -209,91 +211,105 @@ viewTaskForm model =
              else
                 I18n.createTaskTitle model.lang
             )
-        , form [ onSubmit SubmitNewTask, Styles.row 0.6 ]
-            [ input [ id "edit-task-input", placeholder (I18n.taskTitlePlaceholder model.lang), value model.newTaskTitle, onInput UpdateNewTaskTitle, Styles.field [ flexGrow (num 1) ] ] []
-            , input [ type_ "number", placeholder (I18n.ptsPlaceholder model.lang), value model.newTaskPoints, onInput UpdateNewTaskPoints, Styles.field [ width (px 75) ] ] []
-            , select [ onInput (toRecurrence >> UpdateNewTaskRecurrence), Styles.field [] ]
-                [ option [ value "Daily", selected (model.newTaskRecurrence == Daily) ] [ text (I18n.dailyLabel model.lang) ]
-                , option [ value "SpecificDays", selected isSpecificDays ] [ text (I18n.specificDays model.lang) ]
-                , option [ value "Weekly", selected (model.newTaskRecurrence == Weekly) ] [ text (I18n.weeklyLabel model.lang) ]
-                , option [ value "Monthly", selected (model.newTaskRecurrence == Monthly) ] [ text (I18n.monthlyLabel model.lang) ]
-                , option [ value "OneTime", selected (model.newTaskRecurrence == OneTime) ] [ text (I18n.oneTime model.lang) ]
+        , form [ onSubmit SubmitNewTask, css [ displayFlex, flexDirection column, property "gap" "0.75rem" ] ]
+            [ div [ Styles.row 0.6 ]
+                [ input [ id "edit-task-input", placeholder (I18n.taskTitlePlaceholder model.lang), value model.newTaskTitle, onInput UpdateNewTaskTitle, Styles.field [ flexGrow (num 1) ] ] []
+                , input [ type_ "number", placeholder (I18n.ptsPlaceholder model.lang), value model.newTaskPoints, onInput UpdateNewTaskPoints, Styles.field [ width (px 75) ] ] []
+                , select [ onInput (toRecurrence >> UpdateNewTaskRecurrence), Styles.field [] ]
+                    [ option [ value "Daily", selected (model.newTaskRecurrence == Daily) ] [ text (I18n.dailyLabel model.lang) ]
+                    , option [ value "SpecificDays", selected isSpecificDays ] [ text (I18n.specificDays model.lang) ]
+                    , option [ value "Weekly", selected (model.newTaskRecurrence == Weekly) ] [ text (I18n.weeklyLabel model.lang) ]
+                    , option [ value "Monthly", selected (model.newTaskRecurrence == Monthly) ] [ text (I18n.monthlyLabel model.lang) ]
+                    , option [ value "OneTime", selected (model.newTaskRecurrence == OneTime) ] [ text (I18n.oneTime model.lang) ]
+                    ]
                 ]
-            , button [ type_ "submit", Styles.actionButton True "2563EB" ]
-                [ text
-                    (if isEditing then
-                        I18n.saveButton model.lang
-
-                     else
-                        I18n.addButton model.lang
-                    )
-                ]
-            , if isEditing then
-                button [ type_ "button", onClick CancelEditTask, Styles.actionButton True "64748B" ] [ text (I18n.cancelButton model.lang) ]
+            , if isSpecificDays then
+                viewDayPicker model
 
               else
                 text ""
-            ]
-        , if isSpecificDays then
-            viewDayPicker model
-
-          else
-            text ""
-        , div [ Styles.row 0.4, css [ marginTop (rem 0.75) ] ]
-            (span [ css [ fontSize (rem 0.85), fontWeight (int 600), color (hex "64748B") ] ]
-                [ text
-                    (if List.isEmpty model.newTaskAssignedTo then
-                        I18n.assignToEveryone model.lang
-
-                     else
-                        I18n.assignTo model.lang
-                    )
+            , div [ Styles.row 0.75, css [ flexWrap wrap ] ]
+                [ label [ css [ fontSize (rem 0.8), color (hex "64748B"), displayFlex, alignItems center, property "gap" "0.35rem" ] ]
+                    [ text (I18n.startDateLabel model.lang)
+                    , input [ type_ "date", value model.newTaskStartDate, onInput UpdateNewTaskStartDate, Styles.field [ padding2 (rem 0.35) (rem 0.5) ] ] []
+                    ]
+                , label [ css [ fontSize (rem 0.8), color (hex "64748B"), displayFlex, alignItems center, property "gap" "0.35rem" ] ]
+                    [ text (I18n.endDateLabel model.lang)
+                    , input [ type_ "date", value model.newTaskEndDate, onInput UpdateNewTaskEndDate, Styles.field [ padding2 (rem 0.35) (rem 0.5) ] ] []
+                    ]
                 ]
-                :: (Dict.values model.participants |> List.map (viewAssigneeChip model.newTaskAssignedTo))
-            )
-        , div [ Styles.row 0.5, css [ marginTop (rem 0.75) ] ]
-         [ button
-             [ type_ "button"
-             , onClick ToggleNewTaskRequiresApproval
-             , css
-                 [ padding2 (rem 0.35) (rem 0.75)
-                 , borderRadius (px 999)
-                 , fontSize (rem 0.8)
-                 , fontWeight (int 700)
-                 , cursor pointer
-                 , border3 (px 2)
-                     solid
-                     (if model.newTaskRequiresApproval then
-                         hex "F59E0B"
+            , div [ Styles.row 0.4 ]
+                (span [ css [ fontSize (rem 0.85), fontWeight (int 600), color (hex "64748B") ] ]
+                    [ text
+                        (if List.isEmpty model.newTaskAssignedTo then
+                            I18n.assignToEveryone model.lang
+
+                         else
+                            I18n.assignTo model.lang
+                        )
+                    ]
+                    :: (Dict.values model.participants |> List.map (viewAssigneeChip model.newTaskAssignedTo))
+                )
+            , div [ css [ displayFlex, justifyContent spaceBetween, alignItems center, flexWrap wrap, property "gap" "0.5rem", paddingTop (rem 0.25) ] ]
+                [ button
+                    [ type_ "button"
+                    , onClick ToggleNewTaskRequiresApproval
+                    , css
+                        [ padding2 (rem 0.35) (rem 0.75)
+                        , borderRadius (px 999)
+                        , fontSize (rem 0.8)
+                        , fontWeight (int 700)
+                        , cursor pointer
+                        , border3 (px 2)
+                            solid
+                            (if model.newTaskRequiresApproval then
+                                hex "F59E0B"
+
+                             else
+                                hex "CBD5E1"
+                            )
+                        , backgroundColor
+                            (if model.newTaskRequiresApproval then
+                                hex "FEF3C7"
+
+                             else
+                                hex "FFFFFF"
+                            )
+                        , color
+                            (if model.newTaskRequiresApproval then
+                                hex "92400E"
+
+                             else
+                                hex "475569"
+                            )
+                        ]
+                    ]
+                    [ text
+                        (if model.newTaskRequiresApproval then
+                            "⏳ Requires Parent Approval: ON"
+
+                         else
+                            "⚡ Instant Points (No Approval Needed)"
+                        )
+                    ]
+                , div [ Styles.row 0.5 ]
+                    [ if isEditing then
+                        button [ type_ "button", onClick CancelEditTask, Styles.actionButton True "64748B" ] [ text (I18n.cancelButton model.lang) ]
 
                       else
-                         hex "CBD5E1"
-                     )
-                 , backgroundColor
-                     (if model.newTaskRequiresApproval then
-                         hex "FEF3C7"
+                        text ""
+                    , button [ type_ "submit", Styles.actionButton True "2563EB" ]
+                        [ text
+                            (if isEditing then
+                                I18n.saveButton model.lang
 
-                      else
-                         hex "FFFFFF"
-                     )
-                 , color
-                     (if model.newTaskRequiresApproval then
-                         hex "92400E"
-
-                      else
-                         hex "475569"
-                     )
-                 ]
-             ]
-             [ text
-                 (if model.newTaskRequiresApproval then
-                     "⏳ Requires Parent Approval: ON"
-
-                  else
-                     "⚡ Instant Points (No Approval Needed)"
-                 )
-             ]
-         ]
+                             else
+                                I18n.addButton model.lang
+                            )
+                        ]
+                    ]
+                ]
+            ]
         ]
 
 
