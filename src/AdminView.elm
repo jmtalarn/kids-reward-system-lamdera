@@ -130,10 +130,10 @@ viewKidForm model =
                 "🧒"
             )
             (if isEditing then
-                "Edit Kid"
+                I18n.editKidButton model.lang
 
              else
-                "Add Kid"
+                I18n.addKidButton model.lang
             )
         , form [ onSubmit SubmitNewKid, Styles.row 0.6 ]
             [ button
@@ -286,10 +286,10 @@ viewTaskForm model =
                     ]
                     [ text
                         (if model.newTaskRequiresApproval then
-                            "⏳ Requires Parent Approval: ON"
+                            I18n.requiresApprovalLabel model.lang
 
                          else
-                            "⚡ Instant Points (No Approval Needed)"
+                            I18n.instantPointsLabel model.lang
                         )
                     ]
                 , div [ Styles.row 0.5 ]

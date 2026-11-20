@@ -903,3 +903,107 @@ parentButtonLabel lang =
 
         Ca ->
             "🔐 Pares"
+
+
+addKidButton : Language -> String
+addKidButton lang =
+    case lang of
+        En ->
+            "Add Kid"
+
+        Es ->
+            "Añadir Niño"
+
+        Ca ->
+            "Afegir Nen"
+
+
+editKidButton : Language -> String
+editKidButton lang =
+    case lang of
+        En ->
+            "Edit Kid"
+
+        Es ->
+            "Editar Niño"
+
+        Ca ->
+            "Editar Nen"
+
+
+instantPointsLabel : Language -> String
+instantPointsLabel lang =
+    case lang of
+        En ->
+            "⚡ Instant Points (No Approval Needed)"
+
+        Es ->
+            "⚡ Puntos Instantáneos (Sin Aprobación)"
+
+        Ca ->
+            "⚡ Punts Instantanis (Sense Aprovació)"
+
+
+requiresApprovalLabel : Language -> String
+requiresApprovalLabel lang =
+    case lang of
+        En ->
+            "⏳ Requires Parent Approval: ON"
+
+        Es ->
+            "⏳ Requiere Aprobación de Padres: ON"
+
+        Ca ->
+            "⏳ Requereix Aprovació dels Pares: ON"
+
+
+dailyRecurrence : Language -> String
+dailyRecurrence lang =
+    case lang of
+        En ->
+            "Daily"
+
+        Es ->
+            "Diaria"
+
+        Ca ->
+            "Diària"
+
+
+weeklyRecurrence : Language -> String
+weeklyRecurrence lang =
+    case lang of
+        En ->
+            "Weekly"
+
+        Es ->
+            "Semanal"
+
+        Ca ->
+            "Setmanal"
+
+
+monthlyRecurrence : Language -> String
+monthlyRecurrence lang =
+    case lang of
+        En ->
+            "Monthly"
+
+        Es ->
+            "Mensual"
+
+        Ca ->
+            "Mensual"
+
+
+oneTimeRecurrence : Language -> String
+oneTimeRecurrence lang =
+    case lang of
+        En ->
+            "OneTime"
+
+        Es ->
+            "Una Vez"
+
+        Ca ->
+            "Un Cop"
