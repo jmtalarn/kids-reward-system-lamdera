@@ -21,13 +21,151 @@ viewAdminPanel : FrontendModel -> Html FrontendMsg
 viewAdminPanel model =
     div [ css [ displayFlex, flexDirection column, property "gap" "1.25rem" ] ]
         [ viewPendingApprovals model
-        , viewLanguageCard model.lang
-        , viewKidForm model
-        , viewTaskForm model
-        , viewRewardForm model
-        , viewBonusForm model
-        , viewManageItems model
+        , viewAdminSubNav model.lang model.adminSection
+        , case model.adminSection of
+            AdminKidsSection ->
+                div [ css [ displayFlex, flexDirection column, property "gap" "1.25rem" ] ]
+                    [ viewBonusForm model
+                    , viewKidForm model
+                    ]
+
+            AdminTasksSection ->
+                div [ css [ displayFlex, flexDirection column, property "gap" "1.25rem" ] ]
+                    [ viewTaskForm model
+                    , viewManageTasks model
+                    ]
+
+            AdminShopSection ->
+                div [ css [ displayFlex, flexDirection column, property "gap" "1.25rem" ] ]
+                    [ viewRewardForm model
+                    , viewManageRewards model
+                    ]
+
+            AdminSettingsSection ->
+                viewLanguageCard model.lang
         ]
+
+viewAdminSubNav : Language -> AdminSection -> Html FrontendMsg
+viewAdminSubNav lang current =
+    let
+        labels =
+            I18n.adminSectionLabels lang
+
+        items =
+            [ ( AdminKidsSection, labels.kids )
+            , ( AdminTasksSection, labels.tasks )
+            , ( AdminShopSection, labels.shop )
+            , ( AdminSettingsSection, labels.settings )
+            ]
+    in
+    div
+        [ css
+            [ displayFlex
+            , property "gap" "0.4rem"
+            , backgroundColor (hex "E2E8F0")
+            , padding (rem 0.35)
+            , borderRadius (px 14)
+            , flexWrap wrap
+            ]
+        ]
+        (List.map
+            (\( sec, labelText ) ->
+                let
+                    isActive =
+                        current == sec
+                in
+                button
+                    [ type_ "button"
+                    , onClick (SwitchAdminSection sec)
+                    , css
+                        [ flexGrow (num 1)
+                        , padding2 (rem 0.55) (rem 0.75)
+                        , borderRadius (px 10)
+                        , border zero
+                        , fontWeight (int 700)
+                        , fontSize (rem 0.85)
+                        , cursor pointer
+                        , backgroundColor
+                            (if isActive then
+                                hex "FFFFFF"
+
+                             else
+                                rgba 0 0 0 0
+                            )
+                        , color
+                            (if isActive then
+                                hex "0F172A"
+
+                             else
+                                hex "475569"
+                            )
+                        ]
+                    ]
+                    [ text labelText ]
+            )
+            items
+        )
+viewManageTasks : FrontendModel -> Html FrontendMsg
+viewManageTasks model =
+    let
+        sortedTasks =
+            Dict.values model.tasks
+                |> List.sortBy (\t -> if t.active then 0 else 1)
+    in
+    div [ Styles.card [] ]
+        [ sectionHeader "📋" "Tasks List"
+        , div [ css [ displayFlex, flexDirection column, property "gap" "0.5rem" ] ]
+            (List.map
+                (\t ->
+                    div [ css [ displayFlex, justifyContent spaceBetween, alignItems center, padding (rem 0.6), borderRadius (px 10), backgroundColor (hex "F8FAFC") ] ]
+                        [ span [ css [ fontWeight (int 600), opacity (if t.active then num 1 else num 0.5) ] ]
+                            [ text (t.title ++ " (+" ++ String.fromInt t.points ++ " pts)") ]
+                        , div [ Styles.row 0.4 ]
+                            [ button [ type_ "button", onClick (StartEditTask t), Styles.actionButton True "2563EB" ] [ text "✏️ Edit" ]
+                            , button
+                                [ type_ "button"
+                                , onClick (ClickToggleTaskActive t.id)
+                                , Styles.actionButton True (if t.active then "64748B" else "16A34A")
+                                ]
+                                [ text (if t.active then "Archive" else "Restore") ]
+                            ]
+                        ]
+                )
+                sortedTasks
+            )
+        ]
+
+
+viewManageRewards : FrontendModel -> Html FrontendMsg
+viewManageRewards model =
+    let
+        sortedRewards =
+            Dict.values model.rewards
+                |> List.sortBy (\r -> if r.active then 0 else 1)
+    in
+    div [ Styles.card [] ]
+        [ sectionHeader "📦" "Shop Rewards List"
+        , div [ css [ displayFlex, flexDirection column, property "gap" "0.5rem" ] ]
+            (List.map
+                (\r ->
+                    div [ css [ displayFlex, justifyContent spaceBetween, alignItems center, padding (rem 0.6), borderRadius (px 10), backgroundColor (hex "F8FAFC") ] ]
+                        [ span [ css [ fontWeight (int 600), opacity (if r.active then num 1 else num 0.5) ] ]
+                            [ text (r.emoji ++ " " ++ r.title ++ " (" ++ String.fromInt r.cost ++ " pts)") ]
+                        , div [ Styles.row 0.4 ]
+                            [ button [ type_ "button", onClick (StartEditReward r), Styles.actionButton True "2563EB" ] [ text "✏️ Edit" ]
+                            , button
+                                [ type_ "button"
+                                , onClick (ClickToggleRewardActive r.id)
+                                , Styles.actionButton True (if r.active then "64748B" else "16A34A")
+                                ]
+                                [ text (if r.active then "Archive" else "Restore") ]
+                            ]
+                        ]
+                )
+                sortedRewards
+            )
+        ]
+
 
 viewPendingApprovals : FrontendModel -> Html FrontendMsg
 viewPendingApprovals model =

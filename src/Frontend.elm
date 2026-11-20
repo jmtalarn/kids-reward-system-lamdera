@@ -81,6 +81,7 @@ init url key =
       , newTaskRequiresApproval = False
       , newTaskStartDate = ""
       , newTaskEndDate = ""
+      , adminSection = AdminKidsSection
       }
     , Cmd.batch
         [ Lamdera.sendToBackend RequestInitialState
@@ -124,6 +125,7 @@ update msg model =
                         , newKidName = kid.name
                         , newKidAvatar = kid.avatar
                         , newKidColor = kid.color
+                        , adminSection = AdminKidsSection
                       }
                     , Cmd.none
                     )
@@ -517,6 +519,7 @@ update msg model =
                 , newTaskRequiresApproval = task.requiresApproval
                 , newTaskStartDate = Maybe.map (formatDateInput model.zone) task.startDate |> Maybe.withDefault ""
                 , newTaskEndDate = Maybe.map (formatDateInput model.zone) task.endDate |> Maybe.withDefault ""
+                , adminSection = AdminTasksSection
               }
             , Task.attempt (\_ -> NoOp) (Dom.focus "edit-task-input")
             )
@@ -525,7 +528,13 @@ update msg model =
             ( { model | editingTaskId = Nothing, newTaskTitle = "", newTaskPoints = "10", newTaskDays = [], newTaskAssignedTo = [], newTaskRequiresApproval = False, newTaskStartDate = "", newTaskEndDate = "" }, Cmd.none )
 
         StartEditReward reward ->
-            ( { model | editingRewardId = Just reward.id, newRewardTitle = reward.title, newRewardCost = String.fromInt reward.cost, newRewardEmoji = reward.emoji }
+            ( { model 
+            | editingRewardId = Just reward.id
+            , newRewardTitle = reward.title
+            , newRewardCost = String.fromInt reward.cost
+            , newRewardEmoji = reward.emoji
+            , adminSection = AdminShopSection
+            }
             , Task.attempt (\_ -> NoOp) (Dom.focus "edit-reward-input")
             )
 
@@ -604,6 +613,7 @@ update msg model =
               }
             , Lamdera.sendToBackend (ToggleParticipantActive pid)
             )
+        SwitchAdminSection sec -> ( { model | adminSection = sec }, Cmd.none )
 
 
 updateFromBackend : ToFrontend -> FrontendModel -> ( FrontendModel, Cmd FrontendMsg )

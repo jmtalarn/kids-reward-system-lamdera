@@ -63,6 +63,7 @@ type alias FrontendModel =
     , newTaskRequiresApproval : Bool
     , newTaskStartDate : String
     , newTaskEndDate : String
+    , adminSection : AdminSection
     }
 
 
@@ -126,6 +127,7 @@ type FrontendMsg
     | UpdateNewTaskStartDate String 
     | UpdateNewTaskEndDate String
     | ClickToggleParticipantActive ParticipantId
+    | SwitchAdminSection AdminSection
 
 
 type ToBackend
@@ -193,3 +195,9 @@ type Language
 type EmojiTarget
     = KidEmojiTarget
     | RewardEmojiTarget
+
+type AdminSection
+    = AdminKidsSection
+    | AdminTasksSection
+    | AdminShopSection
+    | AdminSettingsSection

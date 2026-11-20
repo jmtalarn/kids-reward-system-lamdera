@@ -1057,3 +1057,28 @@ recurrenceFormat lang recurrence =
                 days
                     |> List.map (shortDayName lang)
                     |> String.join " · "
+
+
+adminSectionLabels : Language -> { kids : String, tasks : String, shop : String, settings : String }
+adminSectionLabels lang =
+    case lang of
+        En ->
+            { kids = "🧒 Kids"
+            , tasks = "🎯 Tasks"
+            , shop = "🎁 Shop"
+            , settings = "⚙️ Settings"
+            }
+
+        Es ->
+            { kids = "🧒 Niños"
+            , tasks = "🎯 Tareas"
+            , shop = "🎁 Tienda"
+            , settings = "⚙️ Ajustes"
+            }
+
+        Ca ->
+            { kids = "🧒 Infants"
+            , tasks = "🎯 Tasques"
+            , shop = "🎁 Botiga"
+            , settings = "⚙️ Configuració"
+            }
