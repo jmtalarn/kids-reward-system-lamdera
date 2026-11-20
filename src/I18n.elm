@@ -719,6 +719,19 @@ bonusAmountPlaceholder lang =
             "+10 / -5"
 
 
+weekdays : Language -> List String
+weekdays lang =
+    case lang of
+        En ->
+            [ "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" ]
+
+        Es ->
+            [ "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom" ]
+
+        Ca ->
+            [ "Dl", "Dt", "Dc", "Dj", "Dv", "Ds", "Dg" ]
+
+
 shortDayName : Language -> Time.Weekday -> String
 shortDayName lang day =
     let
