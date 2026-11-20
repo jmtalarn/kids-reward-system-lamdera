@@ -25,7 +25,7 @@ import Types exposing (..)
 import Url
 import Browser.Events
 import Json.Decode as Decode
-
+import EmojiPickerModal exposing (viewEmojiPickerModal)
 
 app =
     Lamdera.frontend
@@ -76,6 +76,8 @@ init url key =
       , editingRewardId = Nothing
       , showPinPad = False
       , pinLength = String.length Env.parentPin
+      , emojiPicker = Nothing
+      , newTaskRequiresApproval = False
       }
     , Cmd.batch
         [ Lamdera.sendToBackend RequestInitialState
@@ -116,29 +118,53 @@ update msg model =
                 nextCount =
                     model.celebrationCount + 1
 
-                cel =
+                maybeTask =
                     Dict.get tid model.tasks
-                        |> Maybe.map
-                            (\t ->
-                                { id = nextCount
-                                , title = "🎉 +" ++ String.fromInt t.points ++ " Points!"
-                                , subtitle = t.title
-                                , isReward = False
-                                }
-                            )
+
+                needsApproval =
+                    maybeTask |> Maybe.map .requiresApproval |> Maybe.withDefault False
+
+                cel =
+                    if needsApproval then
+                        Nothing
+
+                    else
+                        maybeTask
+                            |> Maybe.map
+                                (\t ->
+                                    { id = nextCount
+                                    , title = "🎉 +" ++ String.fromInt t.points ++ " Points!"
+                                    , subtitle = t.title
+                                    , isReward = False
+                                    }
+                                )
             in
-            ( { model | errorMessage = Nothing, celebration = cel, celebrationCount = nextCount }
-            , Cmd.batch
-                [ Lamdera.sendToBackend
-                    (CompleteTask
-                        { participantId = pid
-                        , taskId = tid
-                        , forDate = targetDate
-                        }
-                    )
-                , Process.sleep 3500 |> Task.perform (\_ -> ClearCelebration nextCount)
-                ]
-            )
+            ( { model
+                | errorMessage =
+                    if needsApproval then
+                        Just "⏳ Sent for Parent Approval!"
+
+                    else
+                        Nothing
+                , celebration = cel
+                , celebrationCount = nextCount
+            }
+         , Cmd.batch
+             [ Lamdera.sendToBackend
+                 (CompleteTask
+                     { participantId = pid
+                     , taskId = tid
+                     , forDate = targetDate
+                     }
+                 )
+             , if needsApproval then
+                 Cmd.none
+
+               else
+                 Process.sleep 3500 |> Task.perform (\_ -> ClearCelebration nextCount)
+             ]
+         )
+
 
         ClickRedeemReward pid rid ->
             let
@@ -253,16 +279,43 @@ update msg model =
                         ( { model | errorMessage = Just "Select at least one day." }, Cmd.none )
 
                     else
-                        ( { model | newTaskTitle = "", newTaskPoints = "10", newTaskAssignedTo = [] }
-                        , Lamdera.sendToBackend
-                            (CreateTask
-                                { title = title
-                                , description = ""
-                                , points = pts
-                                , recurrence = finalRecurrence
-                                , assignedTo = model.newTaskAssignedTo
-                                }
-                            )
+                        let
+                            cmd =
+                                case model.editingTaskId of
+                                    Just tid ->
+                                        Lamdera.sendToBackend
+                                            (UpdateTask
+                                                { id = tid
+                                                , title = title
+                                                , description = ""
+                                                , points = pts
+                                                , recurrence = finalRecurrence
+                                                , assignedTo = model.newTaskAssignedTo
+                                                , requiresApproval = model.newTaskRequiresApproval
+                                                }
+                                            )
+
+                                    Nothing ->
+                                        Lamdera.sendToBackend
+                                            (CreateTask
+                                                { title = title
+                                                , description = ""
+                                                , points = pts
+                                                , recurrence = finalRecurrence
+                                                , assignedTo = model.newTaskAssignedTo
+                                                , requiresApproval = model.newTaskRequiresApproval
+                                                }
+                                            )
+                        in
+                        ( { model
+                            | editingTaskId = Nothing
+                            , newTaskTitle = ""
+                            , newTaskPoints = "10"
+                            , newTaskDays = []
+                            , newTaskAssignedTo = []
+                            , newTaskRequiresApproval = False
+                          }
+                        , cmd
                         )
 
         ToggleTaskDay day ->
@@ -409,12 +462,13 @@ update msg model =
                 , newTaskRecurrence = task.recurrence
                 , newTaskDays = days
                 , newTaskAssignedTo = task.assignedTo
+                , newTaskRequiresApproval = task.requiresApproval
               }
             , Task.attempt (\_ -> NoOp) (Dom.focus "edit-task-input")
             )
 
         CancelEditTask ->
-            ( { model | editingTaskId = Nothing, newTaskTitle = "", newTaskPoints = "10", newTaskDays = [], newTaskAssignedTo = [] }, Cmd.none )
+            ( { model | editingTaskId = Nothing, newTaskTitle = "", newTaskPoints = "10", newTaskDays = [], newTaskAssignedTo = [], newTaskRequiresApproval = False }, Cmd.none )
 
         StartEditReward reward ->
             ( { model | editingRewardId = Just reward.id, newRewardTitle = reward.title, newRewardCost = String.fromInt reward.cost, newRewardEmoji = reward.emoji }
@@ -454,6 +508,31 @@ update msg model =
             )
         NoOp ->
             ( model, Cmd.none )
+
+        OpenEmojiPicker target ->
+         ( { model | emojiPicker = Just target }, Cmd.none )
+
+        CloseEmojiPicker ->
+            ( { model | emojiPicker = Nothing }, Cmd.none )
+
+        PickEmoji emojiStr ->
+            case model.emojiPicker of
+                Just KidEmojiTarget ->
+                    ( { model | newKidAvatar = emojiStr, emojiPicker = Nothing }, Cmd.none )
+
+                Just RewardEmojiTarget ->
+                    ( { model | newRewardEmoji = emojiStr, emojiPicker = Nothing }, Cmd.none )
+
+                Nothing ->
+                    ( model, Cmd.none )
+        ToggleNewTaskRequiresApproval ->
+            ( { model | newTaskRequiresApproval = not model.newTaskRequiresApproval }, Cmd.none )
+
+        ClickApproveTransaction txId ->
+            ( model, Lamdera.sendToBackend (ApproveTransaction txId) )
+
+        ClickRejectTransaction txId ->
+            ( model, Lamdera.sendToBackend (RejectTransaction txId) )
 
 
 updateFromBackend : ToFrontend -> FrontendModel -> ( FrontendModel, Cmd FrontendMsg )
@@ -520,6 +599,7 @@ viewPage model =
         , viewError model
         , viewPinPadModal model
         , viewCelebration model.celebration
+        , viewEmojiPickerModal model.lang model.emojiPicker
         , viewBottomTabs model
         ]
 

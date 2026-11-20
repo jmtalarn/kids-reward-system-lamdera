@@ -1,15 +1,15 @@
 module KidView exposing (viewHeroBanner, viewLedger, viewParticipantBar, viewRewardShop, viewTaskGrid)
 
-
 import Css exposing (..)
 import Dict
 import Domain exposing (..)
 import Html.Styled exposing (..)
 import Html.Styled.Attributes exposing (css, type_)
 import Html.Styled.Events exposing (onClick)
+import I18n
 import Styles
 import Types exposing (..)
-import I18n
+
 
 viewParticipantBar : FrontendModel -> Html FrontendMsg
 viewParticipantBar model =
@@ -59,6 +59,7 @@ viewParticipantBar model =
                         ]
                 )
         )
+
 
 
 -- viewKidDashboard : Participant -> FrontendModel -> Html FrontendMsg
@@ -138,7 +139,6 @@ viewTaskGrid lang kid model =
     let
         kidTasks =
             Dict.values model.tasks
-
                 |> List.filter (\t -> t.active && (List.isEmpty t.assignedTo || List.member kid.id t.assignedTo))
     in
     div []
@@ -339,7 +339,12 @@ viewLedger model =
                             div [ css [ displayFlex, justifyContent spaceBetween, alignItems center, padding2 (rem 0.5) zero, borderBottom3 (px 1) solid (hex "F1F5F9") ] ]
                                 [ span [] [ text (kidLabel ++ " — " ++ tx.description) ]
                                 , div [ Styles.row 0.5 ]
-                                    [ span
+                                    [ if tx.amount > 0 && tx.approvedBy == Nothing then
+                                        span [ Styles.pill "FEF3C7" "92400E" ] [ text (I18n.pendingLabel model.lang) ]
+
+                                      else
+                                        text ""
+                                    , span
                                         [ css
                                             [ fontWeight (int 700)
                                             , color

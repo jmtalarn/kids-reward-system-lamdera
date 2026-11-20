@@ -43,6 +43,7 @@ init =
             , assignedTo = []
             , active = True
             , createdAt = epoch
+            , requiresApproval = False
             }
 
         starterOneTimeTask =
@@ -54,6 +55,7 @@ init =
             , assignedTo = []
             , active = True
             , createdAt = epoch
+            , requiresApproval = False
             }
 
         starterReward =
@@ -166,6 +168,7 @@ handleTimedAction clientId msg now model =
                     , assignedTo = data.assignedTo
                     , active = True
                     , createdAt = now
+                    , requiresApproval = data.requiresApproval
                     }
 
                 updatedModel =
@@ -290,7 +293,12 @@ handleTimedAction clientId msg now model =
                                 , type_ = EarnedFromTask taskId
                                 , description = "Completed: " ++ task.title
                                 , timestamp = forDate
-                                , approvedBy = Nothing
+                                , approvedBy =
+                                    if task.requiresApproval then
+                                        Nothing
+
+                                    else
+                                        Just "Auto"
                                 }
 
                             updatedModel =
@@ -358,6 +366,7 @@ handleTimedAction clientId msg now model =
                                     , points = data.points
                                     , recurrence = data.recurrence
                                     , assignedTo = data.assignedTo
+                                    , requiresApproval = data.requiresApproval
                                 }
                             )
                         )
@@ -385,7 +394,7 @@ handleTimedAction clientId msg now model =
                             { model | participants = Dict.update participantId (Maybe.map toggleGoal) model.participants }
                     in
                     ( updatedModel, Lamdera.broadcast (snapshotFor updatedModel) )
-                    
+
         UpdateReward data ->
             let
                 updated =
@@ -406,7 +415,23 @@ handleTimedAction clientId msg now model =
                     { model | rewards = updated }
             in
             ( updatedModel, Lamdera.broadcast (snapshotFor updatedModel) )
+            
+        ApproveTransaction txId ->
+            let
+                updated =
+                    Dict.update txId (Maybe.map (\tx -> { tx | approvedBy = Just "Parent" })) model.transactions
 
+                updatedModel =
+                    { model | transactions = updated }
+            in
+            ( updatedModel, Lamdera.broadcast (snapshotFor updatedModel) )
+
+        RejectTransaction txId ->
+            let
+                updatedModel =
+                    { model | transactions = Dict.remove txId model.transactions }
+            in
+            ( updatedModel, Lamdera.broadcast (snapshotFor updatedModel) )
 
 cooldownMessage : Recurrence -> String
 cooldownMessage recurrence =

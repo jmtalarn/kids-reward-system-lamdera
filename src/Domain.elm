@@ -47,6 +47,7 @@ type alias Task =
     , assignedTo : List ParticipantId
     , active : Bool
     , createdAt : Time.Posix
+    , requiresApproval : Bool
     }
 
 
@@ -80,12 +81,16 @@ type alias PointTransaction =
 
 -- Derived helper usable on both Frontend and Backend
 balanceFor : ParticipantId -> Dict TransactionId PointTransaction -> Int
-balanceFor participantId transactions =
+balanceFor pid transactions =
     transactions
         |> Dict.values
-        |> List.filter (\tx -> tx.participantId == participantId)
+        |> List.filter
+            (\tx ->
+                tx.participantId == pid && (tx.amount < 0 || tx.approvedBy /= Nothing)
+            )
         |> List.map .amount
         |> List.sum
+
 
 
 canClaimTask : Time.Zone -> Time.Posix -> ParticipantId -> Task -> Dict TransactionId PointTransaction -> Bool

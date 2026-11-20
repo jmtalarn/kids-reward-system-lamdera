@@ -20,13 +20,50 @@ kidColors =
 viewAdminPanel : FrontendModel -> Html FrontendMsg
 viewAdminPanel model =
     div [ css [ displayFlex, flexDirection column, property "gap" "1.25rem" ] ]
-        [ viewLanguageCard model.lang
+        [ viewPendingApprovals model
+        , viewLanguageCard model.lang
         , viewKidForm model
         , viewTaskForm model
         , viewRewardForm model
         , viewBonusForm model
         , viewManageItems model
         ]
+
+viewPendingApprovals : FrontendModel -> Html FrontendMsg
+viewPendingApprovals model =
+    let
+        pending =
+            Dict.values model.transactions
+                |> List.filter (\tx -> tx.amount > 0 && tx.approvedBy == Nothing)
+    in
+    if List.isEmpty pending then
+        text ""
+
+    else
+        div [ Styles.card [ borderColor (hex "F59E0B"), backgroundColor (hex "FFFBEB") ] ]
+            [ sectionHeader "⏳" ("Pending Approvals (" ++ String.fromInt (List.length pending) ++ ")")
+            , div [ css [ displayFlex, flexDirection column, property "gap" "0.5rem" ] ]
+                (List.map
+                    (\tx ->
+                        let
+                            kidLabel =
+                                Dict.get tx.participantId model.participants
+                                    |> Maybe.map (\p -> p.avatar ++ " " ++ p.name)
+                                    |> Maybe.withDefault tx.participantId
+                        in
+                        div [ css [ displayFlex, justifyContent spaceBetween, alignItems center, padding (rem 0.6), borderRadius (px 10), backgroundColor (hex "FFFFFF") ] ]
+                            [ span [ css [ fontWeight (int 600) ] ]
+                                [ text (kidLabel ++ " — " ++ tx.description ++ " (+" ++ String.fromInt tx.amount ++ " pts)") ]
+                            , div [ Styles.row 0.4 ]
+                                [ button [ type_ "button", onClick (ClickApproveTransaction tx.id), Styles.actionButton True "16A34A" ] [ text (I18n.approveButton model.lang) ]
+                                , button [ type_ "button", onClick (ClickRejectTransaction tx.id), Styles.actionButton True "DC2626" ] [ text (I18n.rejectButton model.lang) ]
+                                ]
+                            ]
+                    )
+                    pending
+                )
+            ]
+
 
 
 sectionHeader : String -> String -> Html msg
@@ -99,7 +136,12 @@ viewKidForm model =
                 "Add Kid"
             )
         , form [ onSubmit SubmitNewKid, Styles.row 0.6 ]
-            [ input [ placeholder (I18n.avatarPlaceholder model.lang), value model.newKidAvatar, onInput UpdateNewKidAvatar, Styles.field [ width (px 58), textAlign center ] ] []
+            [ button
+                [ type_ "button"
+                , onClick (OpenEmojiPicker KidEmojiTarget)
+                , Styles.field [ width (px 58), fontSize (rem 1.35), padding (rem 0.35), cursor pointer, textAlign center ]
+                ]
+                [ text model.newKidAvatar ]
             , input [ id "edit-kid-input", placeholder (I18n.kidNamePlaceholder model.lang), value model.newKidName, onInput UpdateNewKidName, Styles.field [ flexGrow (num 1) ] ] []
             , div [ Styles.row 0.35 ] (List.map (viewColorSwatch model.newKidColor) kidColors)
             , button [ type_ "submit", Styles.actionButton True "2563EB" ]
@@ -209,6 +251,49 @@ viewTaskForm model =
                 ]
                 :: (Dict.values model.participants |> List.map (viewAssigneeChip model.newTaskAssignedTo))
             )
+        , div [ Styles.row 0.5, css [ marginTop (rem 0.75) ] ]
+         [ button
+             [ type_ "button"
+             , onClick ToggleNewTaskRequiresApproval
+             , css
+                 [ padding2 (rem 0.35) (rem 0.75)
+                 , borderRadius (px 999)
+                 , fontSize (rem 0.8)
+                 , fontWeight (int 700)
+                 , cursor pointer
+                 , border3 (px 2)
+                     solid
+                     (if model.newTaskRequiresApproval then
+                         hex "F59E0B"
+
+                      else
+                         hex "CBD5E1"
+                     )
+                 , backgroundColor
+                     (if model.newTaskRequiresApproval then
+                         hex "FEF3C7"
+
+                      else
+                         hex "FFFFFF"
+                     )
+                 , color
+                     (if model.newTaskRequiresApproval then
+                         hex "92400E"
+
+                      else
+                         hex "475569"
+                     )
+                 ]
+             ]
+             [ text
+                 (if model.newTaskRequiresApproval then
+                     "⏳ Requires Parent Approval: ON"
+
+                  else
+                     "⚡ Instant Points (No Approval Needed)"
+                 )
+             ]
+         ]
         ]
 
 
@@ -294,7 +379,12 @@ viewRewardForm model =
                 I18n.createRewardTitle model.lang
             )
         , form [ onSubmit SubmitNewReward, Styles.row 0.6 ]
-            [ input [ placeholder (I18n.emojiPlaceholder model.lang), value model.newRewardEmoji, onInput UpdateNewRewardEmoji, Styles.field [ width (px 58), textAlign center ] ] []
+            [ button
+                [ type_ "button"
+                , onClick (OpenEmojiPicker RewardEmojiTarget)
+                , Styles.field [ width (px 58), fontSize (rem 1.35), padding (rem 0.35), cursor pointer, textAlign center ]
+                ]
+                [ text model.newRewardEmoji ]
             , input [ id "edit-reward-input", placeholder (I18n.rewardTitlePlaceholder model.lang), value model.newRewardTitle, onInput UpdateNewRewardTitle, Styles.field [ flexGrow (num 1) ] ] []
             , input [ type_ "number", placeholder (I18n.costPlaceholder model.lang), value model.newRewardCost, onInput UpdateNewRewardCost, Styles.field [ width (px 75) ] ] []
             , button [ type_ "submit", Styles.actionButton True "2563EB" ]

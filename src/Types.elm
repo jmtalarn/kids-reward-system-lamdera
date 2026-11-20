@@ -58,6 +58,8 @@ type alias FrontendModel =
     , editingRewardId : Maybe RewardId
     , showPinPad: Bool
     , pinLength : Int
+    , emojiPicker : Maybe EmojiTarget
+    , newTaskRequiresApproval : Bool
     }
 
 
@@ -70,6 +72,7 @@ type FrontendMsg
     | ClickCompleteTask ParticipantId TaskId
     | ClickRedeemReward ParticipantId RewardId
     | DismissError
+    | NoOp
       -- Parent PIN & Admin Forms
     | OpenPinPad
     | ClosePinPad
@@ -111,7 +114,12 @@ type FrontendMsg
     | StartEditReward Reward
     | CancelEditReward
     | ClickToggleGoal ParticipantId RewardId
-    | NoOp
+    | OpenEmojiPicker EmojiTarget
+    | CloseEmojiPicker
+    | PickEmoji String
+    | ToggleNewTaskRequiresApproval
+    | ClickApproveTransaction TransactionId
+    | ClickRejectTransaction TransactionId
 
 
 type ToBackend
@@ -119,7 +127,7 @@ type ToBackend
     | VerifyParentPin String
     | LogoutParent
     | CreateParticipant { name : String, avatar : String, color : String }
-    | CreateTask { title : String, description : String, points : Int, recurrence : Recurrence, assignedTo : List ParticipantId }
+    | CreateTask { title : String, description : String, points : Int, recurrence : Recurrence, assignedTo : List ParticipantId, requiresApproval : Bool }
     | CreateReward { title : String, description : String, cost : Int, emoji : String }
     | AddManualAdjustment { participantId : ParticipantId, amount : Int, reason : String }
     | ToggleTaskActive TaskId
@@ -128,9 +136,11 @@ type ToBackend
     | RedeemReward { participantId : ParticipantId, rewardId : RewardId }
     | DeleteTransaction TransactionId
     | UpdateParticipant { id : ParticipantId, name : String, avatar : String, color : String }
-    | UpdateTask { id : TaskId, title : String, description : String, points : Int, recurrence : Recurrence, assignedTo : List ParticipantId }
+    | UpdateTask { id : TaskId, title : String, description : String, points : Int, recurrence : Recurrence, assignedTo : List ParticipantId, requiresApproval : Bool }
     | UpdateReward { id : RewardId, title : String, description : String, cost : Int, emoji : String }
     | ToggleParticipantGoal { participantId : ParticipantId, rewardId : RewardId }
+    | ApproveTransaction TransactionId
+    | RejectTransaction TransactionId
 
 
 type BackendMsg
@@ -170,3 +180,7 @@ type Language
     = En
     | Es
     | Ca
+
+type EmojiTarget
+    = KidEmojiTarget
+    | RewardEmojiTarget

@@ -1045,3 +1045,55 @@ shortDayName lang day =
         |> List.drop idx
         |> List.head
         |> Maybe.withDefault ""
+
+
+pendingLabel : Language -> String
+pendingLabel lang =
+    case lang of
+        En ->
+            "⏳ Pending"
+
+        Es ->
+            "⏳ Pendiente"
+
+        Ca ->
+            "⏳ Pendent"
+
+
+approveButton : Language -> String
+approveButton lang =
+    case lang of
+        En ->
+            "✅ Approve"
+
+        Es ->
+            "✅ Aprobar"
+
+        Ca ->
+            "✅ Aprovar"
+
+
+rejectButton : Language -> String
+rejectButton lang =
+    case lang of
+        En ->
+            "❌ Reject"
+
+        Es ->
+            "❌ Rechazar"
+
+        Ca ->
+            "❌ Rebutjar"
+
+
+chooseEmoji : Language -> String
+chooseEmoji lang =
+    case lang of
+        En ->
+            "Choose an Emoji"
+
+        Es ->
+            "Elige un Emoji"
+
+        Ca ->
+            "Tria un Emoji"
