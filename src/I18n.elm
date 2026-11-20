@@ -1,6 +1,7 @@
 module I18n exposing (..)
 
 
+import Domain exposing (Recurrence(..))
 import Types exposing (Language(..))
 import Time exposing (Weekday(..))
 
@@ -1007,3 +1008,40 @@ oneTimeRecurrence lang =
 
         Ca ->
             "Un Cop"
+
+
+recurrenceFormat : Language -> Recurrence -> String
+recurrenceFormat lang recurrence =
+    case recurrence of
+        OneTime ->
+            oneTimeRecurrence lang
+
+        Daily ->
+            dailyRecurrence lang
+
+        Weekly ->
+            weeklyRecurrence lang
+
+        Monthly ->
+            monthlyRecurrence lang
+
+        SpecificDays days ->
+            let
+                weekdaysOnly =
+                    [ Time.Mon, Time.Tue, Time.Wed, Time.Thu, Time.Fri ]
+            in
+            if List.length days == 5 && List.all (\d -> List.member d days) weekdaysOnly then
+                case lang of
+                    En ->
+                        "Mon–Fri"
+
+                    Es ->
+                        "Lun–Vie"
+
+                    Ca ->
+                        "Dl–Dv"
+
+            else
+                days
+                    |> List.map (shortDayName lang)
+                    |> String.join " · "

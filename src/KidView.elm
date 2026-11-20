@@ -189,7 +189,7 @@ viewTaskCard kid model task =
             ]
         ]
         [ div [ css [ displayFlex, justifyContent spaceBetween, marginBottom (rem 0.75) ] ]
-            [ span [ Styles.pill "F1F5F9" "475569" ] [ text (Debug.toString task.recurrence) ]
+            [ span [ Styles.pill "F1F5F9" "475569" ] [ text (I18n.recurrenceFormat model.lang task.recurrence) ]
             , span
                 [ css
                     [ fontWeight (int 800)

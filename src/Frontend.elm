@@ -940,7 +940,7 @@ viewTasks pid model =
                                         ++ " pts | "
                                         ++ t.title
                                         ++ " ("
-                                        ++ Debug.toString t.recurrence
+                                        ++ I18n.recurrenceFormat model.lang t.recurrence
                                         ++ ")"
                                     )
                                 ]

@@ -169,7 +169,7 @@ viewCalendarTaskCard kid model task =
             ]
         ]
         [ div [ css [ displayFlex, justifyContent spaceBetween, marginBottom (rem 0.5) ] ]
-            [ span [ Styles.pill "F1F5F9" "475569" ] [ text (Debug.toString task.recurrence) ]
+            [ span [ Styles.pill "F1F5F9" "475569" ] [ text (I18n.recurrenceFormat model.lang task.recurrence) ]
             , span [ css [ fontWeight (int 800), color (if available then hex "16A34A" else hex "64748B") ] ]
                 [ text (if available then "+" ++ String.fromInt task.points ++ " pts" else "✅ Done") ]
             ]
