@@ -113,21 +113,21 @@ viewManageTasks model =
                 |> List.sortBy (\t -> if t.active then 0 else 1)
     in
     div [ Styles.card [] ]
-        [ sectionHeader "📋" "Tasks List"
+        [ sectionHeader "📋" (I18n.tasksListTitle model.lang)
         , div [ css [ displayFlex, flexDirection column, property "gap" "0.5rem" ] ]
             (List.map
                 (\t ->
                     div [ css [ displayFlex, justifyContent spaceBetween, alignItems center, padding (rem 0.6), borderRadius (px 10), backgroundColor (hex "F8FAFC") ] ]
                         [ span [ css [ fontWeight (int 600), opacity (if t.active then num 1 else num 0.5) ] ]
-                            [ text (t.title ++ " (+" ++ String.fromInt t.points ++ " pts)") ]
+                            [ text (t.title ++ " (+" ++ I18n.pointsText model.lang t.points ++ ")") ]
                         , div [ Styles.row 0.4 ]
-                            [ button [ type_ "button", onClick (StartEditTask t), Styles.actionButton True "2563EB" ] [ text "✏️ Edit" ]
+                            [ button [ type_ "button", onClick (StartEditTask t), Styles.actionButton True "2563EB" ] [ text (I18n.editButton model.lang) ]
                             , button
                                 [ type_ "button"
                                 , onClick (ClickToggleTaskActive t.id)
                                 , Styles.actionButton True (if t.active then "64748B" else "16A34A")
                                 ]
-                                [ text (if t.active then "Archive" else "Restore") ]
+                                [ text (if t.active then I18n.archiveButtonText model.lang else I18n.restoreButtonText model.lang) ]
                             ]
                         ]
                 )
@@ -144,21 +144,21 @@ viewManageRewards model =
                 |> List.sortBy (\r -> if r.active then 0 else 1)
     in
     div [ Styles.card [] ]
-        [ sectionHeader "📦" "Shop Rewards List"
+        [ sectionHeader "📦" (I18n.shopRewardsListTitle model.lang)
         , div [ css [ displayFlex, flexDirection column, property "gap" "0.5rem" ] ]
             (List.map
                 (\r ->
                     div [ css [ displayFlex, justifyContent spaceBetween, alignItems center, padding (rem 0.6), borderRadius (px 10), backgroundColor (hex "F8FAFC") ] ]
                         [ span [ css [ fontWeight (int 600), opacity (if r.active then num 1 else num 0.5) ] ]
-                            [ text (r.emoji ++ " " ++ r.title ++ " (" ++ String.fromInt r.cost ++ " pts)") ]
+                            [ text (r.emoji ++ " " ++ r.title ++ " (" ++ I18n.pointsText model.lang r.cost ++ ")") ]
                         , div [ Styles.row 0.4 ]
-                            [ button [ type_ "button", onClick (StartEditReward r), Styles.actionButton True "2563EB" ] [ text "✏️ Edit" ]
+                            [ button [ type_ "button", onClick (StartEditReward r), Styles.actionButton True "2563EB" ] [ text (I18n.editButton model.lang) ]
                             , button
                                 [ type_ "button"
                                 , onClick (ClickToggleRewardActive r.id)
                                 , Styles.actionButton True (if r.active then "64748B" else "16A34A")
                                 ]
-                                [ text (if r.active then "Archive" else "Restore") ]
+                                [ text (if r.active then I18n.archiveButtonText model.lang else I18n.restoreButtonText model.lang) ]
                             ]
                         ]
                 )
@@ -179,7 +179,7 @@ viewPendingApprovals model =
 
     else
         div [ Styles.card [ borderColor (hex "F59E0B"), backgroundColor (hex "FFFBEB") ] ]
-            [ sectionHeader "⏳" ("Pending Approvals (" ++ String.fromInt (List.length pending) ++ ")")
+            [ sectionHeader "⏳" (I18n.pendingApprovalsTitle model.lang (List.length pending))
             , div [ css [ displayFlex, flexDirection column, property "gap" "0.5rem" ] ]
                 (List.map
                     (\tx ->
@@ -191,7 +191,7 @@ viewPendingApprovals model =
                         in
                         div [ css [ displayFlex, justifyContent spaceBetween, alignItems center, padding (rem 0.6), borderRadius (px 10), backgroundColor (hex "FFFFFF") ] ]
                             [ span [ css [ fontWeight (int 600) ] ]
-                                [ text (kidLabel ++ " — " ++ tx.description ++ " (+" ++ String.fromInt tx.amount ++ " pts)") ]
+                                [ text (kidLabel ++ " — " ++ tx.description ++ " (+" ++ I18n.pointsText model.lang tx.amount ++ ")") ]
                             , div [ Styles.row 0.4 ]
                                 [ button [ type_ "button", onClick (ClickApproveTransaction tx.id), Styles.actionButton True "16A34A" ] [ text (I18n.approveButton model.lang) ]
                                 , button [ type_ "button", onClick (ClickRejectTransaction tx.id), Styles.actionButton True "DC2626" ] [ text (I18n.rejectButton model.lang) ]
@@ -256,64 +256,119 @@ viewLanguageCard current =
 viewKidForm : FrontendModel -> Html FrontendMsg
 viewKidForm model =
     let
+        maybeEditingKid =
+            model.editingKidId |> Maybe.andThen (\id -> Dict.get id model.participants)
+
         isEditing =
-            model.editingKidId /= Nothing
-        maybeEditingKid = model.editingKidId |> Maybe.andThen (\id -> Dict.get id model.participants)
+            maybeEditingKid /= Nothing
     in
     div [ Styles.card [] ]
-        [ sectionHeader
-            (if isEditing then
-                "✏️"
+        [ div [ css [ displayFlex, justifyContent spaceBetween, alignItems center, marginBottom (rem 0.85) ] ]
+            [ div [ css [ displayFlex, alignItems center, property "gap" "0.45rem", fontWeight (int 700), fontSize (rem 1.05), color (hex "1E293B") ] ]
+                [ span []
+                    [ text
+                        (if isEditing then
+                            "✏️"
 
-             else
-                "🧒"
-            )
-            (if isEditing then
-                I18n.editKidButton model.lang
+                         else
+                            "➕"
+                        )
+                    ]
+                , span []
+                    [ text
+                        (case maybeEditingKid of
+                            Just kid ->
+                                I18n.editingKidLabel model.lang kid.name
 
-             else
-                I18n.addKidButton model.lang
-            )
-        , form [ onSubmit SubmitNewKid, Styles.row 0.6 ]
-            [ button
-                [ type_ "button"
-                , onClick (OpenEmojiPicker KidEmojiTarget)
-                , Styles.field [ width (px 58), fontSize (rem 1.35), padding (rem 0.35), cursor pointer, textAlign center ]
-                ]
-                [ text model.newKidAvatar ]
-            , input [ id "edit-kid-input", placeholder (I18n.kidNamePlaceholder model.lang), value model.newKidName, onInput UpdateNewKidName, Styles.field [ flexGrow (num 1) ] ] []
-            , div [ Styles.row 0.35 ] (List.map (viewColorSwatch model.newKidColor) kidColors)
-            , button [ type_ "submit", Styles.actionButton True "2563EB" ]
-                [ text
-                    (if isEditing then
-                        I18n.saveButton model.lang
-
-                     else
-                        I18n.addButton model.lang
-                    )
+                            Nothing ->
+                                I18n.newKidLabel model.lang
+                        )
+                    ]
                 ]
             , if isEditing then
-                button [ type_ "button", onClick CancelEditKid, Styles.actionButton True "64748B" ] [ text (I18n.cancelButton model.lang) ]
+                button
+                    [ type_ "button"
+                    , onClick CancelEditKid
+                    , css
+                        [ padding2 (rem 0.3) (rem 0.7)
+                        , borderRadius (px 999)
+                        , border3 (px 1) solid (hex "CBD5E1")
+                        , backgroundColor (hex "F8FAFC")
+                        , color (hex "334155")
+                        , fontSize (rem 0.8)
+                        , fontWeight (int 700)
+                        , cursor pointer
+                        ]
+                    ]
+                    [ text (I18n.newKidLabel model.lang) ]
 
               else
                 text ""
-            , case maybeEditingKid of
-                Just kid ->
-                    button 
+            ]
+        , if not isEditing && not (Dict.isEmpty model.participants) then
+            div [ css [ fontSize (rem 0.8), color (hex "64748B"), marginBottom (rem 0.75) ] ]
+                [ text (I18n.newKidTip model.lang) ]
+
+          else
+            text ""
+        , form [ onSubmit SubmitNewKid, css [ displayFlex, flexDirection column, property "gap" "0.75rem" ] ]
+            [ div [ Styles.row 0.6 ]
+                [ button
                     [ type_ "button"
-                    , onClick (ClickToggleParticipantActive (Maybe.withDefault "" model.editingKidId))
-                    , Styles.actionButton True 
-                        (if kid.active then
-                                "DC2626"
+                    , onClick (OpenEmojiPicker KidEmojiTarget)
+                    , Styles.field [ width (px 54), fontSize (rem 1.35), padding (rem 0.35), cursor pointer, textAlign center ]
+                    ]
+                    [ text model.newKidAvatar ]
+                , input
+                    [ id "edit-kid-input"
+                    , placeholder (I18n.kidNamePlaceholder model.lang)
+                    , value model.newKidName
+                    , onInput UpdateNewKidName
+                    , Styles.field [ flexGrow (num 1) ]
+                    ]
+                    []
+                ]
+            , div [ css [ displayFlex, justifyContent spaceBetween, alignItems center, flexWrap wrap, property "gap" "0.5rem" ] ]
+                [ div [ Styles.row 0.4 ]
+                    (span [ css [ fontSize (rem 0.8), fontWeight (int 600), color (hex "64748B") ] ] [ text (I18n.colorLabel model.lang) ]
+                        :: List.map (viewColorSwatch model.newKidColor) kidColors
+                    )
+                , div [ Styles.row 0.5 ]
+                    [ case maybeEditingKid of
+                        Just kid ->
+                            button
+                                [ type_ "button"
+                                , onClick (ClickToggleParticipantActive kid.id)
+                                , Styles.actionButton True
+                                    (if kid.active then
+                                        "DC2626"
+
+                                     else
+                                        "16A34A"
+                                    )
+                                ]
+                                [ text
+                                    (if kid.active then
+                                        I18n.archiveButtonText model.lang
+
+                                     else
+                                        I18n.unarchiveButtonText model.lang
+                                    )
+                                ]
+
+                        Nothing ->
+                            text ""
+                    , button [ type_ "submit", Styles.actionButton True "2563EB" ]
+                        [ text
+                            (if isEditing then
+                                I18n.saveChanges model.lang
 
                              else
-                                "16A34A"
-                            ) 
-                    ] 
-                    [ text (if (kid.active) then I18n.archiveButtonText model.lang else I18n.unarchiveButtonText model.lang) ]   
-
-                Nothing ->
-                    text ""
+                                I18n.addKidButton model.lang
+                            )
+                        ]
+                    ]
+                ]
             ]
         ]
 
@@ -580,7 +635,7 @@ viewRewardForm model =
 
 viewBonusForm : FrontendModel -> Html FrontendMsg
 viewBonusForm model =
-    case model.selectedParticipant |> Maybe.andThen (\pid -> Dict.get pid model.participants) of
+    case model.editingKidId |> Maybe.andThen (\pid -> Dict.get pid model.participants) of
         Just kid ->
             div [ Styles.card [] ]
                 [ sectionHeader "⚡" (I18n.quickAdjustmentTitle model.lang kid.avatar kid.name)
@@ -605,7 +660,7 @@ viewManageItems model =
                     (\t ->
                         div [ css [ displayFlex, justifyContent spaceBetween, alignItems center, padding (rem 0.6), borderRadius (px 10), backgroundColor (hex "F8FAFC") ] ]
                             [ span [ css [ fontWeight (int 600), opacity (if t.active then num 1 else num 0.5) ] ]
-                                [ text (t.title ++ " (+" ++ String.fromInt t.points ++ " pts)") ]
+                                [ text (t.title ++ " (+" ++ I18n.pointsText model.lang t.points ++ ")") ]
                             , div [ Styles.row 0.4 ]
                                 [ button [ type_ "button", onClick (StartEditTask t), Styles.actionButton True "2563EB" ] [ text (I18n.editButton model.lang) ]
                                 , button
@@ -624,7 +679,7 @@ viewManageItems model =
                     (\r ->
                         div [ css [ displayFlex, justifyContent spaceBetween, alignItems center, padding (rem 0.6), borderRadius (px 10), backgroundColor (hex "F8FAFC") ] ]
                             [ span [ css [ fontWeight (int 600), opacity (if r.active then num 1 else num 0.5) ] ]
-                                [ text (r.emoji ++ " " ++ r.title ++ " (" ++ String.fromInt r.cost ++ " pts)") ]
+                                [ text (r.emoji ++ " " ++ r.title ++ " (" ++ I18n.pointsText model.lang r.cost ++ ")") ]
                             , div [ Styles.row 0.4 ]
                                 [ button [ type_ "button", onClick (StartEditReward r), Styles.actionButton True "2563EB" ] [ text (I18n.editButton model.lang) ]
                                 , button

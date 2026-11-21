@@ -78,15 +78,15 @@ viewEmojiPickerModal lang maybeTarget =
                             [ text "✕" ]
                         ]
                     , div [ css [ displayFlex, flexDirection column, property "gap" "1rem" ] ]
-                        (List.map viewCategory emojiCategories)
+                        (List.map (viewCategory lang) emojiCategories)
                     ]
                 ]
 
 
-viewCategory : ( String, List String ) -> Html FrontendMsg
-viewCategory ( title, emojis ) =
+viewCategory : Language -> ( String, List String ) -> Html FrontendMsg
+viewCategory lang ( title, emojis ) =
     div []
-        [ div [ css [ fontSize (rem 0.78), fontWeight (int 700), color (hex "64748B"), marginBottom (rem 0.4), textTransform uppercase ] ] [ text title ]
+        [ div [ css [ fontSize (rem 0.78), fontWeight (int 700), color (hex "64748B"), marginBottom (rem 0.4), textTransform uppercase ] ] [ text (I18n.emojiCategory lang title) ]
         , div
             [ css
                 [ property "display" "grid"

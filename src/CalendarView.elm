@@ -42,7 +42,7 @@ viewCalendarTab kid model =
                 ]
             ]
             (List.map (viewDayCell kid model) weekDays)
-        , h3 [] [ text (I18n.tasksForLabel model.lang ++ " " ++ formatDayLabel model.zone model.selectedDate) ]
+        , h3 [] [ text (I18n.tasksForLabel model.lang ++ " " ++ formatDayLabel model.lang model.zone model.selectedDate) ]
         , div [ Styles.grid ] (List.map (viewCalendarTaskCard kid model) kidTasks)
         ]
 
@@ -126,7 +126,7 @@ viewDayCell kid model dayPosix =
             ]
         ]
         [ span [ css [ fontSize (rem 0.72), color (hex "64748B"), fontWeight (int 700) ] ]
-            [ text (weekdayShort model.zone dayPosix) ]
+            [ text (I18n.shortDayName model.lang (Time.toWeekday model.zone dayPosix)) ]
         , span [ css [ fontSize (rem 1.1), fontWeight (int 800), margin2 (rem 0.2) zero ] ]
             [ text (String.fromInt (Time.toDay model.zone dayPosix)) ]
         , span [ css [ fontSize (rem 0.7), fontWeight (int 700), color (hex "16A34A") ] ]
@@ -171,7 +171,14 @@ viewCalendarTaskCard kid model task =
         [ div [ css [ displayFlex, justifyContent spaceBetween, marginBottom (rem 0.5) ] ]
             [ span [ Styles.pill "F1F5F9" "475569" ] [ text (I18n.recurrenceFormat model.lang task.recurrence) ]
             , span [ css [ fontWeight (int 800), color (if available then hex "16A34A" else hex "64748B") ] ]
-                [ text (if available then "+" ++ String.fromInt task.points ++ " pts" else "✅ Done") ]
+                [ text
+                    (if available then
+                        "+" ++ I18n.pointsText model.lang task.points
+
+                     else
+                        I18n.doneLabel model.lang
+                    )
+                ]
             ]
         , div [ css [ fontWeight (int 700) ] ] [ text task.title ]
         ]
@@ -209,31 +216,6 @@ daysOfWeek zone anchor =
     List.range 0 6 |> List.map (\d -> Time.millisToPosix (mondayMillis + d * msPerDay))
 
 
-weekdayShort : Time.Zone -> Time.Posix -> String
-weekdayShort zone t =
-    case Time.toWeekday zone t of
-        Time.Mon ->
-            "Mon"
-
-        Time.Tue ->
-            "Tue"
-
-        Time.Wed ->
-            "Wed"
-
-        Time.Thu ->
-            "Thu"
-
-        Time.Fri ->
-            "Fri"
-
-        Time.Sat ->
-            "Sat"
-
-        Time.Sun ->
-            "Sun"
-
-
-formatDayLabel : Time.Zone -> Time.Posix -> String
-formatDayLabel zone t =
-    weekdayShort zone t ++ " " ++ String.fromInt (Time.toDay zone t)
+formatDayLabel : Language -> Time.Zone -> Time.Posix -> String
+formatDayLabel lang zone t =
+    I18n.shortDayName lang (Time.toWeekday zone t) ++ " " ++ String.fromInt (Time.toDay zone t)

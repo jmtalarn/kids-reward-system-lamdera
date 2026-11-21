@@ -3,6 +3,7 @@ module Backend exposing (..)
 import Dict
 import Domain exposing (..)
 import Env
+import I18n
 import Lamdera exposing (ClientId, SessionId)
 import Set
 import Task
@@ -104,7 +105,7 @@ updateFromFrontend sessionId clientId msg model =
                 )
 
             else
-                ( model, Lamdera.sendToFrontend clientId (ActionFailed "Incorrect Parent PIN.") )
+                ( model, Lamdera.sendToFrontend clientId (ActionFailed (I18n.incorrectPinError model.lang)) )
 
         LogoutParent ->
             ( { model | authenticatedSessions = Set.remove sessionId model.authenticatedSessions }
@@ -124,7 +125,7 @@ updateFromFrontend sessionId clientId msg model =
                 ( model, Task.perform (GotTimeForToBackend clientId msg) Time.now )
 
             else
-                ( model, Lamdera.sendToFrontend clientId (ActionFailed "Parent authorization required.") )
+                ( model, Lamdera.sendToFrontend clientId (ActionFailed (I18n.parentAuthorizationError model.lang)) )
 
 
 update : BackendMsg -> BackendModel -> ( BackendModel, Cmd BackendMsg )
@@ -216,10 +217,10 @@ handleTimedAction clientId msg now model =
                             balanceFor participantId model.transactions
                     in
                     if not reward.active then
-                        ( model, Lamdera.sendToFrontend clientId (ActionFailed "Reward is no longer available.") )
+                        ( model, Lamdera.sendToFrontend clientId (ActionFailed (I18n.rewardUnavailableError model.lang)) )
 
                     else if currentBalance < reward.cost then
-                        ( model, Lamdera.sendToFrontend clientId (ActionFailed "Not enough points!") )
+                        ( model, Lamdera.sendToFrontend clientId (ActionFailed (I18n.notEnoughPointsError model.lang)) )
 
                     else
                         let
@@ -228,7 +229,7 @@ handleTimedAction clientId msg now model =
                                 , participantId = participantId
                                 , amount = -reward.cost
                                 , type_ = SpentOnReward rewardId
-                                , description = "Redeemed: " ++ reward.title
+                                , description = I18n.redeemedDescription model.lang reward.title
                                 , timestamp = now
                                 , approvedBy = Nothing
                                 }
@@ -242,7 +243,7 @@ handleTimedAction clientId msg now model =
                         ( updatedModel, Lamdera.broadcast (snapshotFor updatedModel) )
 
                 _ ->
-                    ( model, Lamdera.sendToFrontend clientId (ActionFailed "Invalid participant or reward.") )
+                    ( model, Lamdera.sendToFrontend clientId (ActionFailed (I18n.invalidParticipantOrTaskError model.lang)) )
 
         VerifyParentPin _ ->
             ( model, Cmd.none )
@@ -258,12 +259,12 @@ handleTimedAction clientId msg now model =
                             , type_ = ManualAdjustment reason
                             , description =
                                 if String.isEmpty (String.trim reason) then
-                                    "Parent adjustment"
+                                    I18n.parentAdjustmentDescription model.lang
 
                                 else
                                     reason
                             , timestamp = now
-                            , approvedBy = Just "Parent"
+                            , approvedBy = Just (I18n.parentApprovedLabel model.lang)
                             }
 
                         updatedModel =
@@ -275,7 +276,7 @@ handleTimedAction clientId msg now model =
                     ( updatedModel, Lamdera.broadcast (snapshotFor updatedModel) )
 
                 Nothing ->
-                    ( model, Lamdera.sendToFrontend clientId (ActionFailed "Participant not found.") )
+                    ( model, Lamdera.sendToFrontend clientId (ActionFailed (I18n.participantNotFoundError model.lang)) )
 
         CompleteTask { participantId, taskId, forDate } ->
             case ( Dict.get participantId model.participants, Dict.get taskId model.tasks ) of
@@ -285,16 +286,16 @@ handleTimedAction clientId msg now model =
                             Time.posixToMillis forDate > (Time.posixToMillis now + 86400000)
                     in
                     if not task.active then
-                        ( model, Lamdera.sendToFrontend clientId (ActionFailed "This task is inactive.") )
+                        ( model, Lamdera.sendToFrontend clientId (ActionFailed (I18n.taskInactiveError model.lang)) )
 
                     else if isFuture then
-                        ( model, Lamdera.sendToFrontend clientId (ActionFailed "Cannot complete tasks for future dates!") )
+                        ( model, Lamdera.sendToFrontend clientId (ActionFailed (I18n.futureTaskError model.lang)) )
                     
                     else if not (isTaskActiveOnDate serverZone forDate task) then
-                     ( model, Lamdera.sendToFrontend clientId (ActionFailed "This task is not scheduled for that date.") )
+                     ( model, Lamdera.sendToFrontend clientId (ActionFailed (I18n.unscheduledTaskError model.lang)) )
 
                     else if not (canClaimTask serverZone forDate participantId task model.transactions) then
-                        ( model, Lamdera.sendToFrontend clientId (ActionFailed (cooldownMessage task.recurrence)) )
+                        ( model, Lamdera.sendToFrontend clientId (ActionFailed (I18n.alreadyCompletedError model.lang task.recurrence)) )
 
                     else
                         let
@@ -303,14 +304,14 @@ handleTimedAction clientId msg now model =
                                 , participantId = participantId
                                 , amount = task.points
                                 , type_ = EarnedFromTask taskId
-                                , description = "Completed: " ++ task.title
+                                , description = I18n.completedDescription model.lang task.title
                                 , timestamp = forDate
                                 , approvedBy =
                                     if task.requiresApproval then
                                         Nothing
 
                                     else
-                                        Just "Auto"
+                                        Just (I18n.autoApprovedLabel model.lang)
                                 }
 
                             updatedModel =
@@ -322,7 +323,7 @@ handleTimedAction clientId msg now model =
                         ( updatedModel, Lamdera.broadcast (snapshotFor updatedModel) )
 
                 _ ->
-                    ( model, Lamdera.sendToFrontend clientId (ActionFailed "Invalid participant or task.") )
+                    ( model, Lamdera.sendToFrontend clientId (ActionFailed (I18n.invalidParticipantOrRewardError model.lang)) )
 
         LogoutParent ->
             ( model, Cmd.none )
@@ -433,7 +434,7 @@ handleTimedAction clientId msg now model =
         ApproveTransaction txId ->
             let
                 updated =
-                    Dict.update txId (Maybe.map (\tx -> { tx | approvedBy = Just "Parent" })) model.transactions
+                    Dict.update txId (Maybe.map (\tx -> { tx | approvedBy = Just (I18n.parentApprovedLabel model.lang) })) model.transactions
 
                 updatedModel =
                     { model | transactions = updated }
@@ -461,25 +462,6 @@ handleTimedAction clientId msg now model =
                     { model | participants = updated }
             in
             ( updatedModel, Lamdera.broadcast (snapshotFor updatedModel) )
-
-
-cooldownMessage : Recurrence -> String
-cooldownMessage recurrence =
-    case recurrence of
-        OneTime ->
-            "One-time task already completed!"
-
-        Daily ->
-            "Already completed today! Come back tomorrow."
-
-        Weekly ->
-            "Already completed this week! Resets Monday."
-
-        Monthly ->
-            "Already completed this month!"
-
-        SpecificDays _ ->
-            "Not scheduled for this day (or already completed today)!"
 
 
 snapshotFor : BackendModel -> ToFrontend

@@ -1082,3 +1082,552 @@ adminSectionLabels lang =
             , shop = "🎁 Botiga"
             , settings = "⚙️ Configuració"
             }
+
+
+pointsText : Language -> Int -> String
+pointsText lang points =
+    case lang of
+        En ->
+            String.fromInt points ++ " pts"
+
+        Es ->
+            String.fromInt points ++ " pts"
+
+        Ca ->
+            String.fromInt points ++ " pts"
+
+
+doneLabel : Language -> String
+doneLabel lang =
+    case lang of
+        En ->
+            "✅ Done"
+
+        Es ->
+            "✅ Hecho"
+
+        Ca ->
+            "✅ Fet"
+
+
+newKidLabel : Language -> String
+newKidLabel lang =
+    case lang of
+        En ->
+            "New Kid"
+
+        Es ->
+            "Nuevo niño"
+
+        Ca ->
+            "Nen nou"
+
+
+editingKidLabel : Language -> String -> String
+editingKidLabel lang name =
+    case lang of
+        En ->
+            "Editing: " ++ name
+
+        Es ->
+            "Editando: " ++ name
+
+        Ca ->
+            "Editant: " ++ name
+
+
+newKidTip : Language -> String
+newKidTip lang =
+    case lang of
+        En ->
+            "Tip: Tap any kid above to edit their profile, or fill out below to add another."
+
+        Es ->
+            "Consejo: toca cualquier niño de arriba para editar su perfil, o completa el formulario para añadir otro."
+
+        Ca ->
+            "Consell: toca qualsevol nen de dalt per editar-ne el perfil, o omple el formulari per afegir-ne un altre."
+
+
+colorLabel : Language -> String
+colorLabel lang =
+    case lang of
+        En ->
+            "Color:"
+
+        Es ->
+            "Color:"
+
+        Ca ->
+            "Color:"
+
+
+saveChanges : Language -> String
+saveChanges lang =
+    case lang of
+        En ->
+            "Save Changes"
+
+        Es ->
+            "Guardar cambios"
+
+        Ca ->
+            "Desar canvis"
+
+
+tasksListTitle : Language -> String
+tasksListTitle lang =
+    case lang of
+        En ->
+            "Tasks List"
+
+        Es ->
+            "Lista de tareas"
+
+        Ca ->
+            "Llista de tasques"
+
+
+shopRewardsListTitle : Language -> String
+shopRewardsListTitle lang =
+    case lang of
+        En ->
+            "Shop Rewards List"
+
+        Es ->
+            "Lista de premios"
+
+        Ca ->
+            "Llista de premis"
+
+
+pendingApprovalsTitle : Language -> Int -> String
+pendingApprovalsTitle lang count =
+    case lang of
+        En ->
+            "Pending Approvals (" ++ String.fromInt count ++ ")"
+
+        Es ->
+            "Aprobaciones pendientes (" ++ String.fromInt count ++ ")"
+
+        Ca ->
+            "Aprovacions pendents (" ++ String.fromInt count ++ ")"
+
+
+rewardUnlocked : Language -> String
+rewardUnlocked lang =
+    case lang of
+        En ->
+            "Reward Unlocked!"
+
+        Es ->
+            "¡Premio desbloqueado!"
+
+        Ca ->
+            "Premi desbloquejat!"
+
+
+pointsEarned : Language -> Int -> String
+pointsEarned lang points =
+    case lang of
+        En ->
+            "🎉 +" ++ String.fromInt points ++ " Points!"
+
+        Es ->
+            "🎉 +" ++ String.fromInt points ++ " puntos"
+
+        Ca ->
+            "🎉 +" ++ String.fromInt points ++ " punts"
+
+
+sentForApproval : Language -> String
+sentForApproval lang =
+    case lang of
+        En ->
+            "⏳ Sent for Parent Approval!"
+
+        Es ->
+            "⏳ ¡Enviado para aprobación parental!"
+
+        Ca ->
+            "⏳ Enviat per a l'aprovació dels pares!"
+
+
+enterKidNameError : Language -> String
+enterKidNameError lang =
+    case lang of
+        En ->
+            "Enter a name for the kid."
+
+        Es ->
+            "Introduce un nombre para el niño."
+
+        Ca ->
+            "Introdueix un nom per al nen."
+
+
+enterTaskTitleError : Language -> String
+enterTaskTitleError lang =
+    case lang of
+        En ->
+            "Enter a task title."
+
+        Es ->
+            "Introduce un título para la tarea."
+
+        Ca ->
+            "Introdueix un títol per a la tasca."
+
+
+invalidPointsError : Language -> String
+invalidPointsError lang =
+    case lang of
+        En ->
+            "Points must be a valid number."
+
+        Es ->
+            "Los puntos deben ser un número válido."
+
+        Ca ->
+            "Els punts han de ser un número vàlid."
+
+
+selectDayError : Language -> String
+selectDayError lang =
+    case lang of
+        En ->
+            "Select at least one day."
+
+        Es ->
+            "Selecciona al menos un día."
+
+        Ca ->
+            "Selecciona almenys un dia."
+
+
+enterRewardTitleError : Language -> String
+enterRewardTitleError lang =
+    case lang of
+        En ->
+            "Enter a reward title."
+
+        Es ->
+            "Introduce un título para el premio."
+
+        Ca ->
+            "Introdueix un títol per al premi."
+
+
+invalidCostError : Language -> String
+invalidCostError lang =
+    case lang of
+        En ->
+            "Cost must be a valid number."
+
+        Es ->
+            "El coste debe ser un número válido."
+
+        Ca ->
+            "El cost ha de ser un número vàlid."
+
+
+invalidAdjustmentError : Language -> String
+invalidAdjustmentError lang =
+    case lang of
+        En ->
+            "Adjustment must be a number."
+
+        Es ->
+            "El ajuste debe ser un número."
+
+        Ca ->
+            "L'ajust ha de ser un número."
+
+
+emojiCategory : Language -> String -> String
+emojiCategory lang category =
+    case ( lang, category ) of
+        ( Es, "Chores & Jobs" ) ->
+            "Tareas y trabajos"
+
+        ( Ca, "Chores & Jobs" ) ->
+            "Tasques i feines"
+
+        ( Es, "School & Music" ) ->
+            "Escuela y música"
+
+        ( Ca, "School & Music" ) ->
+            "Escola i música"
+
+        ( Es, "Sports & Active" ) ->
+            "Deporte y actividad"
+
+        ( Ca, "Sports & Active" ) ->
+            "Esport i activitat"
+
+        ( Es, "Fun & Rewards" ) ->
+            "Diversión y premios"
+
+        ( Ca, "Fun & Rewards" ) ->
+            "Diversió i premis"
+
+        ( Es, "Treats & Food" ) ->
+            "Comida y golosinas"
+
+        ( Ca, "Treats & Food" ) ->
+            "Menjar i llaminadures"
+
+        ( Es, "Stars & Heroes" ) ->
+            "Estrellas y héroes"
+
+        ( Ca, "Stars & Heroes" ) ->
+            "Estrelles i herois"
+
+        ( _, _ ) ->
+            category
+
+
+incorrectPinError : Language -> String
+incorrectPinError lang =
+    case lang of
+        En ->
+            "Incorrect Parent PIN."
+
+        Es ->
+            "PIN parental incorrecto."
+
+        Ca ->
+            "PIN parental incorrecte."
+
+
+parentAuthorizationError : Language -> String
+parentAuthorizationError lang =
+    case lang of
+        En ->
+            "Parent authorization required."
+
+        Es ->
+            "Se requiere autorización parental."
+
+        Ca ->
+            "Cal autorització parental."
+
+
+rewardUnavailableError : Language -> String
+rewardUnavailableError lang =
+    case lang of
+        En ->
+            "Reward is no longer available."
+
+        Es ->
+            "El premio ya no está disponible."
+
+        Ca ->
+            "El premi ja no està disponible."
+
+
+notEnoughPointsError : Language -> String
+notEnoughPointsError lang =
+    case lang of
+        En ->
+            "Not enough points!"
+
+        Es ->
+            "¡No hay suficientes puntos!"
+
+        Ca ->
+            "No hi ha prou punts!"
+
+
+invalidParticipantOrRewardError : Language -> String
+invalidParticipantOrRewardError lang =
+    case lang of
+        En ->
+            "Invalid participant or reward."
+
+        Es ->
+            "Participante o premio no válido."
+
+        Ca ->
+            "Participant o premi no vàlid."
+
+
+invalidParticipantOrTaskError : Language -> String
+invalidParticipantOrTaskError lang =
+    case lang of
+        En ->
+            "Invalid participant or task."
+
+        Es ->
+            "Participante o tarea no válida."
+
+        Ca ->
+            "Participant o tasca no vàlida."
+
+
+participantNotFoundError : Language -> String
+participantNotFoundError lang =
+    case lang of
+        En ->
+            "Participant not found."
+
+        Es ->
+            "No se ha encontrado al participante."
+
+        Ca ->
+            "No s'ha trobat el participant."
+
+
+taskInactiveError : Language -> String
+taskInactiveError lang =
+    case lang of
+        En ->
+            "This task is inactive."
+
+        Es ->
+            "Esta tarea está inactiva."
+
+        Ca ->
+            "Aquesta tasca està inactiva."
+
+
+futureTaskError : Language -> String
+futureTaskError lang =
+    case lang of
+        En ->
+            "Cannot complete tasks for future dates!"
+
+        Es ->
+            "¡No se pueden completar tareas de fechas futuras!"
+
+        Ca ->
+            "No es poden completar tasques de dates futures!"
+
+
+unscheduledTaskError : Language -> String
+unscheduledTaskError lang =
+    case lang of
+        En ->
+            "This task is not scheduled for that date."
+
+        Es ->
+            "Esta tarea no está programada para esa fecha."
+
+        Ca ->
+            "Aquesta tasca no està programada per a aquesta data."
+
+
+alreadyCompletedError : Language -> Recurrence -> String
+alreadyCompletedError lang recurrence =
+    case ( lang, recurrence ) of
+        ( En, OneTime ) ->
+            "One-time task already completed!"
+
+        ( Es, OneTime ) ->
+            "¡La tarea única ya está completada!"
+
+        ( Ca, OneTime ) ->
+            "La tasca única ja està completada!"
+
+        ( En, Daily ) ->
+            "Already completed today! Come back tomorrow."
+
+        ( Es, Daily ) ->
+            "¡Ya está completada hoy! Vuelve mañana."
+
+        ( Ca, Daily ) ->
+            "Ja està completada avui! Torna demà."
+
+        ( En, Weekly ) ->
+            "Already completed this week! Resets Monday."
+
+        ( Es, Weekly ) ->
+            "¡Ya está completada esta semana! Se reinicia el lunes."
+
+        ( Ca, Weekly ) ->
+            "Ja està completada aquesta setmana! Es reinicia dilluns."
+
+        ( En, Monthly ) ->
+            "Already completed this month!"
+
+        ( Es, Monthly ) ->
+            "¡Ya está completada este mes!"
+
+        ( Ca, Monthly ) ->
+            "Ja està completada aquest mes!"
+
+        ( langValue, SpecificDays _ ) ->
+            case langValue of
+                En ->
+                    "Not scheduled for this day (or already completed today)!"
+
+                Es ->
+                    "¡No está programada para este día (o ya está completada hoy)!"
+
+                Ca ->
+                    "No està programada per a aquest dia (o ja està completada avui)!"
+
+
+redeemedDescription : Language -> String -> String
+redeemedDescription lang rewardTitle =
+    case lang of
+        En ->
+            "Redeemed: " ++ rewardTitle
+
+        Es ->
+            "Canjeado: " ++ rewardTitle
+
+        Ca ->
+            "Bescanviat: " ++ rewardTitle
+
+
+parentAdjustmentDescription : Language -> String
+parentAdjustmentDescription lang =
+    case lang of
+        En ->
+            "Parent adjustment"
+
+        Es ->
+            "Ajuste parental"
+
+        Ca ->
+            "Ajust parental"
+
+
+completedDescription : Language -> String -> String
+completedDescription lang taskTitle =
+    case lang of
+        En ->
+            "Completed: " ++ taskTitle
+
+        Es ->
+            "Completada: " ++ taskTitle
+
+        Ca ->
+            "Completada: " ++ taskTitle
+
+
+autoApprovedLabel : Language -> String
+autoApprovedLabel lang =
+    case lang of
+        En ->
+            "Auto"
+
+        Es ->
+            "Automático"
+
+        Ca ->
+            "Automàtic"
+
+
+parentApprovedLabel : Language -> String
+parentApprovedLabel lang =
+    case lang of
+        En ->
+            "Parent"
+
+        Es ->
+            "Padre"
+
+        Ca ->
+            "Pare"

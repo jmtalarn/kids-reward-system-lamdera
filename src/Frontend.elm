@@ -156,7 +156,7 @@ update msg model =
                             |> Maybe.map
                                 (\t ->
                                     { id = nextCount
-                                    , title = "🎉 +" ++ String.fromInt t.points ++ " Points!"
+                                    , title = I18n.pointsEarned model.lang t.points
                                     , subtitle = t.title
                                     , isReward = False
                                     }
@@ -165,7 +165,7 @@ update msg model =
             ( { model
                 | errorMessage =
                     if needsApproval then
-                        Just "⏳ Sent for Parent Approval!"
+                        Just (I18n.sentForApproval model.lang)
 
                     else
                         Nothing
@@ -201,7 +201,7 @@ update msg model =
                         |> Maybe.map
                             (\r ->
                                 { id = nextCount
-                                , title = r.emoji ++ " Reward Unlocked!"
+                                ,                                 title = r.emoji ++ " " ++ I18n.rewardUnlocked model.lang
                                 , subtitle = r.title
                                 , isReward = True
                                 }
@@ -249,7 +249,7 @@ update msg model =
 
         SubmitNewKid ->
             if String.isEmpty (String.trim model.newKidName) then
-                ( { model | errorMessage = Just "Enter a name for the kid." }, Cmd.none )
+                ( { model | errorMessage = Just (I18n.enterKidNameError model.lang) }, Cmd.none )
 
             else
                 let
@@ -311,14 +311,14 @@ update msg model =
             in
             case ( String.trim model.newTaskTitle, String.toInt model.newTaskPoints ) of
                 ( "", _ ) ->
-                    ( { model | errorMessage = Just "Enter a task title." }, Cmd.none )
+                    ( { model | errorMessage = Just (I18n.enterTaskTitleError model.lang) }, Cmd.none )
 
                 ( _, Nothing ) ->
-                    ( { model | errorMessage = Just "Points must be a valid number." }, Cmd.none )
+                    ( { model | errorMessage = Just (I18n.invalidPointsError model.lang) }, Cmd.none )
 
                 ( title, Just pts ) ->
                     if hasEmptyDays then
-                        ( { model | errorMessage = Just "Select at least one day." }, Cmd.none )
+                        ( { model | errorMessage = Just (I18n.selectDayError model.lang) }, Cmd.none )
 
                     else
                         let
@@ -398,7 +398,7 @@ update msg model =
         SubmitNewReward ->
             case ( String.trim model.newRewardTitle, String.toInt model.newRewardCost ) of
                 ( "", _ ) ->
-                    ( { model | errorMessage = Just "Enter a reward title." }, Cmd.none )
+                    ( { model | errorMessage = Just (I18n.enterRewardTitleError model.lang) }, Cmd.none )
 
                 ( title, Just cost ) ->
                     ( { model | newRewardTitle = "", newRewardCost = "30" }
@@ -413,7 +413,7 @@ update msg model =
                     )
 
                 _ ->
-                    ( { model | errorMessage = Just "Cost must be a valid number." }, Cmd.none )
+                    ( { model | errorMessage = Just (I18n.invalidCostError model.lang) }, Cmd.none )
 
         UpdateBonusAmount val ->
             ( { model | bonusAmount = val }, Cmd.none )
@@ -435,7 +435,7 @@ update msg model =
                     )
 
                 Nothing ->
-                    ( { model | errorMessage = Just "Adjustment must be a number." }, Cmd.none )
+                    ( { model | errorMessage = Just (I18n.invalidAdjustmentError model.lang) }, Cmd.none )
 
         SelectNewKidColor hexColor ->
             ( { model | newKidColor = hexColor }, Cmd.none )
@@ -478,7 +478,17 @@ update msg model =
             )
 
         SelectTab tab ->
-            ( { model | activeTab = tab }, Cmd.none )
+                let
+                    nextModel =
+                        { model | activeTab = tab }
+                in
+                ( if tab == AdminTab then
+                    loadKidIntoEdit nextModel
+
+                else
+                    nextModel
+                , Cmd.none
+                )
 
         SelectCalendarDate date ->
             ( { model | selectedDate = date }, Cmd.none )
@@ -497,7 +507,17 @@ update msg model =
             )
 
         CancelEditKid ->
-            ( { model | editingKidId = Nothing, newKidName = "", newKidAvatar = "🦊" }, Cmd.none )
+            (
+                { model
+                | activeTab = AdminTab
+                , adminSection = AdminKidsSection
+                , selectedParticipant = Nothing
+                , editingKidId = Nothing
+                , newKidName = ""
+                , newKidAvatar = "🦊"
+                }
+                , Cmd.none
+            )
 
         StartEditTask task ->
             let
@@ -645,19 +665,27 @@ updateFromBackend msg model =
             )
 
         ParentPinVerified ok ->
-            ( { model
-                | isParentMode = ok
-                , showPinPad = False
-                , pinInput = ""
-                , activeTab =
-                    if ok then
-                        AdminTab
+         let
+             nextModel =
+                 { model
+                     | isParentMode = ok
+                     , showPinPad = False
+                     , pinInput = ""
+                     , activeTab =
+                         if ok then
+                             AdminTab
 
-                    else
-                        TasksTab
-              }
-            , Cmd.none
-            )
+                         else
+                             TasksTab
+                 }
+         in
+         ( if ok then
+             loadKidIntoEdit nextModel
+
+           else
+             nextModel
+         , Cmd.none
+         )
 
         ActionFailed err ->
             ( { model | errorMessage = Just err }, Cmd.none )
@@ -665,7 +693,7 @@ updateFromBackend msg model =
 
 view : FrontendModel -> Browser.Document FrontendMsg
 view model =
-    { title = "Kids Reward System"
+    { title = I18n.appTitle model.lang
     , body = [ toUnstyled (viewPage model) ]
     }
 
@@ -680,7 +708,7 @@ viewPage model =
             ]
         , viewError model
         , viewPinPadModal model
-        , viewCelebration model.celebration
+        ,                 viewCelebration model.celebration
         , viewEmojiPickerModal model.lang model.emojiPicker
         , viewBottomTabs model
         ]
@@ -736,7 +764,7 @@ viewActiveTab model =
                         ]
 
                 Nothing ->
-                    p [] [ text "Select or add a kid first." ]
+                    p [] [ text (I18n.selectOrAddKid model.lang) ]
 
         ActivityTab ->
             viewLedger model
@@ -1213,3 +1241,21 @@ formatDateInput zone t =
             String.padLeft 2 '0' (String.fromInt (Time.toDay zone t))
     in
     y ++ "-" ++ m ++ "-" ++ d
+
+loadKidIntoEdit : FrontendModel -> FrontendModel
+loadKidIntoEdit model =
+    case model.selectedParticipant |> Maybe.andThen (\pid -> Dict.get pid model.participants) of
+        Just kid ->
+            { model
+                | editingKidId = Just kid.id
+                , newKidName = kid.name
+                , newKidAvatar = kid.avatar
+                , newKidColor = kid.color
+              }
+
+        Nothing ->
+            { model
+                | editingKidId = Nothing
+                , newKidName = ""
+                , newKidAvatar = "🦊"
+              }

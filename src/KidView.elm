@@ -21,11 +21,56 @@ viewParticipantBar model =
         inactiveParticipants =
             Dict.values model.participants
                 |> List.filter (not << .active)
+
+        isAddingNew =
+            model.isParentMode && model.activeTab == AdminTab && model.editingKidId == Nothing
+
+        newKidPill =
+            if model.isParentMode then
+                [ button
+                    [ type_ "button"
+                    , onClick CancelEditKid
+                    , css
+                        [ padding2 (rem 0.65) (rem 1.1)
+                        , borderRadius (px 16)
+                        , cursor pointer
+                        , displayFlex
+                        , alignItems center
+                        , alignSelf stretch
+                        , property "gap" "0.5rem"
+                        , fontWeight (int 700)
+                        , backgroundColor
+                            (if isAddingNew then
+                                hex "EFF6FF"
+
+                             else
+                                hex "FFFFFF"
+                            )
+                        , color (hex "2563EB")
+                        , border3 (px 2)
+                            solid
+                            (if isAddingNew then
+                                hex "2563EB"
+
+                             else
+                                hex "CBD5E1"
+                            )
+                        ]
+                    ]
+                    [ span [ css [ fontSize (rem 1.35), lineHeight (num 1) ] ] [ text "➕" ]
+                    , span [] [ text (I18n.newKidLabel model.lang) ]
+                    ]
+                ]
+
+            else
+                []
+
     in
     div [ Styles.row 0.75, css [ marginBottom (rem 1.5) ] ]
-        ((activeParticipants
-            |> List.map (participantPill model)
-         )
+        (
+            (activeParticipants
+                |> List.map (participantPill model)
+            )
             ++ (if model.isParentMode then
                     inactiveParticipants
                         |> List.map (participantPill model)
@@ -33,6 +78,7 @@ viewParticipantBar model =
                 else
                     []
                )
+            ++ newKidPill
         )
 
 
@@ -86,7 +132,7 @@ participantPill model p =
         , div [ css [ textAlign left ] ]
             [ div [] [ text p.name ]
             , div [ css [ fontSize (rem 0.85), color (hex (String.dropLeft 1 p.color)) ] ]
-                [ text ("★ " ++ String.fromInt pts ++ " pts") ]
+                [ text ("★ " ++ I18n.pointsText model.lang pts) ]
             ]
         ]
 
@@ -142,12 +188,12 @@ viewHeroBanner lang kid points streak rewards =
 
           else
             div [ css [ marginTop (rem 1.15), paddingTop (rem 1), borderTop3 (px 1) solid (rgba 255 255 255 0.25), displayFlex, flexDirection column, property "gap" "0.65rem" ] ]
-                (List.map (viewGoalRow points) wishlist)
+                (List.map (viewGoalRow lang points) wishlist)
         ]
 
 
-viewGoalRow : Int -> Reward -> Html FrontendMsg
-viewGoalRow points reward =
+viewGoalRow : Language -> Int -> Reward -> Html FrontendMsg
+viewGoalRow lang points reward =
     let
         pct =
             if reward.cost <= 0 then
@@ -159,7 +205,7 @@ viewGoalRow points reward =
     div []
         [ div [ css [ displayFlex, justifyContent spaceBetween, fontSize (rem 0.85), fontWeight (int 700), marginBottom (rem 0.25) ] ]
             [ span [] [ text ("🎯 " ++ reward.emoji ++ " " ++ reward.title) ]
-            , span [] [ text (String.fromInt points ++ " / " ++ String.fromInt reward.cost ++ " pts") ]
+            , span [] [ text (String.fromInt points ++ " / " ++ I18n.pointsText lang reward.cost) ]
             ]
         , div [ css [ height (px 8), backgroundColor (rgba 255 255 255 0.25), borderRadius (px 999), overflow hidden ] ]
             [ div [ css [ height (Css.pct 100), width (Css.pct (toFloat pct)), backgroundColor (hex "FFFFFF") ] ] [] ]
@@ -236,7 +282,7 @@ viewTaskCard kid model task =
                         "+" ++ String.fromInt task.points ++ " pts"
 
                      else
-                        "✅ Done"
+                        I18n.doneLabel model.lang
                     )
                 ]
             ]
@@ -278,7 +324,7 @@ viewRewardCard lang kid points reward =
                 [ span [ css [ fontSize (rem 2) ] ] [ text reward.emoji ]
                 , div []
                     [ div [ css [ fontWeight (int 700) ] ] [ text reward.title ]
-                    , div [ css [ fontSize (rem 0.85), color (hex "64748B") ] ] [ text (String.fromInt reward.cost ++ " pts") ]
+                    , div [ css [ fontSize (rem 0.85), color (hex "64748B") ] ] [ text (I18n.pointsText lang reward.cost) ]
                     ]
                 ]
             , button
@@ -392,7 +438,7 @@ viewLedger model =
                                                 )
                                             ]
                                         ]
-                                        [ text (String.fromInt tx.amount ++ " pts") ]
+                                        [ text (I18n.pointsText model.lang tx.amount) ]
                                     , if model.isParentMode then
                                         button
                                             [ onClick (ClickDeleteTransaction tx.id)
